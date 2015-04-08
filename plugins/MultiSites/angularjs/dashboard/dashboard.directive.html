@@ -71,7 +71,7 @@
                 metric="predicate"
                 ng-class-odd="'columnodd'"
                 display-revenue-column="displayRevenueColumn"
-                ng-repeat="website in model.sites | orderBy:predicate:reverse | multiSitesGroupFilter:model.getCurrentPagingOffsetStart():model.pageSize">
+                ng-repeat="website in model.sites | orderBy:predicate:reverse">
             </tr>
         </tbody>
 
