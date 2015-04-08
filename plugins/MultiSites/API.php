@@ -15,7 +15,6 @@ use Piwik\Common;
 use Piwik\Container\StaticContainer;
 use Piwik\DataTable;
 use Piwik\DataTable\Row;
-use Piwik\DataTable\Row\DataTableSummaryRow;
 use Piwik\Period\Range;
 use Piwik\Piwik;
 use Piwik\Plugins\Goals\Archiver;
@@ -61,51 +60,6 @@ class API extends \Piwik\Plugin\API
             self::METRIC_IS_ECOMMERCE_KEY       => false,
         )
     );
-
-    public function getAllWithGroups($period, $date, $segment = false, $pattern = false)
-    {
-        $sites = $this->getAll($period, $date, $segment, $_restrictSitesToLogin = false, $enhanced = true, $pattern);
-
-        /** @var DataTableSummaryRow[] $groups */
-        $groups = array();
-        $sitesByGroup = $sites->getEmptyClone(true);
-
-        foreach ($sites->getRowsWithoutSummaryRow() as $index => $site) {
-
-            $group = $site->getMetadata('group');
-
-            if (!empty($group) && !array_key_exists($group, $groups)) {
-                $row = new DataTableSummaryRow();
-                $row->setColumns(array('label' => $site->getColumn('label')));
-                $row->setMetadata('isGroup', true);
-                $row->setMetadata('group', $group);
-                $row->setSubtable(new DataTable());
-                $sitesByGroup->addRow($row);
-
-                $groups[$group] = $row;
-            }
-
-            if (!empty($group)) {
-                $groups[$group]->getSubtable()->addRow($site);
-            }
-
-            $sitesByGroup->addRow($site);
-        }
-
-        $sitesByGroup->disableFilter('Sort');
-        $sitesByGroup->queueFilter(function ($dataTable) {
-            foreach ($dataTable as $row) {
-                if ($row instanceof DataTableSummaryRow) {
-                    $row->recalculate();
-                    $row->removeSubtable();
-                    $row->setColumn('label', $row->getMetadata('group'));
-                    $row->deleteMetadata('group');
-                }
-            }
-        });
-
-        return $sitesByGroup;
-    }
 
     /**
      * Returns a report displaying the total visits, actions and revenue, as

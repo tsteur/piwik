@@ -20,6 +20,7 @@
             searchTerm   : '',
             lastVisits   : '?',
             lastVisitsDate : '?',
+            numberOfSites : 0,
             updateWebsitesList: updateWebsitesList,
             getNumberOfFilteredSites: getNumberOfFilteredSites,
             getNumberOfPages: getNumberOfPages,
@@ -28,6 +29,9 @@
             previousPage: previousPage,
             nextPage: nextPage,
             searchSite: searchSite,
+            sortBy: sortBy,
+            reverse: true,
+            sortColumn: 'nb_visits',
             fetchAllSites: fetchAllSites
         };
 
@@ -40,32 +44,29 @@
             model.sites = [];
         }
 
-        function updateWebsitesList(processedReport) {
-            if (!processedReport) {
+        function updateWebsitesList(report) {
+            if (!report) {
                 onError();
                 return;
             }
 
-            var allSites = processedReport.reportData;
-            var reportMetadata = processedReport.reportMetadata;
+            var allSites = report.sites;
             angular.forEach(allSites, function (site, index) {
-                site.idsite   = reportMetadata[index].idsite;
-                site.group    = reportMetadata[index].group;
-                site.main_url = reportMetadata[index].main_url;
-                // casting evolution to int fixes sorting, see: https://github.com/piwik/piwik/issues/4885
                 site.visits_evolution    = parseInt(site.visits_evolution, 10);
                 site.pageviews_evolution = parseInt(site.pageviews_evolution, 10);
                 site.revenue_evolution   = parseInt(site.revenue_evolution, 10);
             });
 
-            model.totalActions = processedReport.reportTotal.nb_pageviews;
-            model.totalVisits  = processedReport.reportTotal.nb_visits;
-            model.totalRevenue = processedReport.reportTotal.revenue;
+            model.totalActions  = report.totals.nb_pageviews;
+            model.totalActions  = report.totals.nb_pageviews;
+            model.totalVisits   = report.totals.nb_visits;
+            model.totalRevenue  = report.totals.revenue;
+            model.numberOfSites = report.numSites;
             model.sites = allSites;
         }
 
         function getNumberOfFilteredSites () {
-            return 1000; // todo
+            return model.numberOfSites; // todo
         }
 
         function getNumberOfPages() {
@@ -84,6 +85,20 @@
             }
             return parseInt(end, 10);
         }
+
+        function previousPage() {
+            model.currentPage = model.currentPage - 1;
+            fetchAllSites();
+        }
+
+        function sortBy(metric) {
+            if (model.sortColumn == metric) {
+                model.reverse = !model.reverse;
+            }
+
+            model.sortColumn = metric;
+            fetchAllSites();
+        };
 
         function previousPage() {
             model.currentPage = model.currentPage - 1;
@@ -118,10 +133,11 @@
                 return piwikApi.fetch({
                     method: 'API.getProcessedReport',
                     apiModule: 'MultiSites',
-                    apiAction: 'getAllWithGroups',
+                    apiAction: 'getAll',
                     hideMetricsDoc: '1',
                     filter_limit: '0',
                     showColumns: 'label,nb_visits',
+                    enhanced: 1,
                     date: lastDate
                 });
             }).then(function (response) {
@@ -141,17 +157,25 @@
             model.errorLoadingSites = false;
 
             var params = {
-                method: 'API.getProcessedReport',
-                apiModule: 'MultiSites',
-                apiAction: 'getAllWithGroups',
+                module: 'MultiSites',
+                action: 'getAllWithGroups',
                 hideMetricsDoc: '1',
+                filter_sort_order: 'asc',
                 filter_limit: model.pageSize,
                 filter_offset: getCurrentPagingOffsetStart(),
                 showColumns: 'label,nb_visits,nb_pageviews,visits_evolution,pageviews_evolution,revenue_evolution,nb_actions,revenue'
             };
 
             if (model.searchTerm) {
-                model.pattern = model.searchTerm;
+                params.pattern = model.searchTerm;
+            }
+
+            if (model.sortColumn) {
+                params.filter_sort_column = model.sortColumn;
+            }
+
+            if (model.reverse) {
+                params.filter_sort_order = 'desc';
             }
 
             return piwikApi.fetch(params).then(function (response) {

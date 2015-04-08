@@ -8,10 +8,15 @@
  */
 namespace Piwik\Plugins\MultiSites;
 
+use Piwik\API\Request;
+use Piwik\API\ResponseBuilder;
 use Piwik\Common;
 use Piwik\Config;
 use Piwik\Date;
 use Piwik\Period;
+use Piwik\DataTable;
+use Piwik\DataTable\Row;
+use Piwik\DataTable\Row\DataTableSummaryRow;
 use Piwik\Piwik;
 use Piwik\Translation\Translator;
 use Piwik\View;
@@ -38,6 +43,18 @@ class Controller extends \Piwik\Plugin\Controller
     public function standalone()
     {
         return $this->getSitesInfo($isWidgetized = true);
+    }
+
+    public function getAllWithGroups()
+    {
+        $pattern = Common::getRequestVar('pattern', '', 'string');
+        $limit   = Common::getRequestVar('filter_limit', 0, 'int');
+        $request = $_GET + $_POST;
+
+        $dashboard = new Dashboard();
+        $sites = $dashboard->getAllWithGroups($request, $pattern, $limit);
+
+        return json_encode($sites);
     }
 
     public function getSitesInfo($isWidgetized = false)

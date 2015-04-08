@@ -12,30 +12,30 @@
     <table id="mt" class="dataTable" cellspacing="0">
         <thead>
         <tr>
-            <th id="names" class="label" ng-click="sortBy('label')" ng-class="{columnSorted: 'label' == predicate}">
+            <th id="names" class="label" ng-click="model.sortBy('label')" ng-class="{columnSorted: 'label' == model.sortColumn}">
                 <span class="heading">{{ 'General_Website'|translate }}</span>
-                <span ng-class="{multisites_asc: !reverse && 'label' == predicate, multisites_desc: reverse && 'label' == predicate}" class="arrow"></span>
+                <span ng-class="{multisites_asc: !model.reverse && 'label' == model.sortColumn, multisites_desc: model.reverse && 'label' == model.sortColumn}" class="arrow"></span>
             </th>
-            <th id="visits" class="multisites-column" ng-click="sortBy('nb_visits')" ng-class="{columnSorted: 'nb_visits' == predicate}">
+            <th id="visits" class="multisites-column" ng-click="model.sortBy('nb_visits')" ng-class="{columnSorted: 'nb_visits' == model.sortColumn}">
                 <span class="heading">{{ 'General_ColumnNbVisits'|translate }}</span>
-                <span ng-class="{multisites_asc: !reverse && 'nb_visits' == predicate, multisites_desc: reverse && 'nb_visits' == predicate}" class="arrow"></span>
+                <span ng-class="{multisites_asc: !model.reverse && 'nb_visits' == model.sortColumn, multisites_desc: model.reverse && 'nb_visits' == model.sortColumn}" class="arrow"></span>
             </th>
-            <th id="pageviews" class="multisites-column" ng-click="sortBy('nb_pageviews')" ng-class="{columnSorted: 'nb_pageviews' == predicate}">
+            <th id="pageviews" class="multisites-column" ng-click="model.sortBy('nb_pageviews')" ng-class="{columnSorted: 'nb_pageviews' == model.sortColumn}">
                 <span class="heading">{{ 'General_ColumnPageviews'|translate }}</span>
-                <span ng-class="{multisites_asc: !reverse && 'nb_pageviews' == predicate, multisites_desc: reverse && 'nb_pageviews' == predicate}" class="arrow"></span>
+                <span ng-class="{multisites_asc: !model.reverse && 'nb_pageviews' == model.sortColumn, multisites_desc: model.reverse && 'nb_pageviews' == model.sortColumn}" class="arrow"></span>
             </th>
 
-            <th ng-if="displayRevenueColumn" id="revenue" class="multisites-column" ng-click="sortBy('revenue')" ng-class="{columnSorted: 'revenue' == predicate}">
+            <th ng-if="displayRevenueColumn" id="revenue" class="multisites-column" ng-click="model.sortBy('revenue')" ng-class="{columnSorted: 'revenue' == model.sortColumn}">
                 <span class="heading">{{ 'General_ColumnRevenue'|translate }}</span>
-                <span ng-class="{multisites_asc: !reverse && 'revenue' == predicate, multisites_desc: reverse && 'revenue' == predicate}" class="arrow"></span>
+                <span ng-class="{multisites_asc: !model.reverse && 'revenue' == model.sortColumn, multisites_desc: model.reverse && 'revenue' == model.sortColumn}" class="arrow"></span>
             </th>
 
-            <th id="evolution" colspan="{{ showSparklines ? 2 : 1 }}" ng-class="{columnSorted: evolutionSelector == predicate}">
-                <span class="arrow" ng-class="{multisites_asc: !reverse && evolutionSelector == predicate, multisites_desc: reverse && evolutionSelector == predicate}"></span>
+            <th id="evolution" colspan="{{ showSparklines ? 2 : 1 }}" ng-class="{columnSorted: evolutionSelector == model.sortColumn}">
+                <span class="arrow" ng-class="{multisites_asc: !model.reverse && evolutionSelector == model.sortColumn, multisites_desc: model.reverse && evolutionSelector == model.sortColumn}"></span>
                 <span class="evolution"
-                      ng-click="sortBy(evolutionSelector)"> {{ 'MultiSites_Evolution'|translate }}</span>
+                      ng-click="model.sortBy(evolutionSelector)"> {{ 'MultiSites_Evolution'|translate }}</span>
                 <select class="selector" id="evolution_selector" ng-model="evolutionSelector"
-                        ng-change="predicate = evolutionSelector">
+                        ng-change="model.sortColumn = evolutionSelector">
                     <option value="visits_evolution">{{ 'General_ColumnNbVisits'|translate }}</option>
                     <option value="pageviews_evolution">{{ 'General_ColumnPageviews'|translate }}</option>
                     <option ng-if="displayRevenueColumn" value="revenue_evolution">{{ 'General_ColumnRevenue'|translate }}</option>
@@ -68,10 +68,10 @@
                 piwik-multisites-site
                 date-sparkline="dateSparkline"
                 show-sparklines="showSparklines"
-                metric="predicate"
+                metric="model.sortColumn"
                 ng-class-odd="'columnodd'"
                 display-revenue-column="displayRevenueColumn"
-                ng-repeat="website in model.sites | orderBy:predicate:reverse">
+                ng-repeat="website in model.sites">
             </tr>
         </tbody>
 
