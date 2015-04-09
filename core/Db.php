@@ -142,7 +142,8 @@ class Db
         /** @var \Zend_Db_Adapter_Abstract $db */
         $db = self::get();
         if (!method_exists($db, 'getProfiler')) {
-            throw new \Exception("Using tracker Db in core Piwik!");
+            $ex = new \Exception("Using tracker Db in core Piwik!");
+            echo $ex->getMessage() . "\n" . $ex->getTraceAsString()."\n";
         }
         $profiler = $db->getProfiler();
         $q = $profiler->queryStart($sql, \Zend_Db_Profiler::INSERT);
