@@ -248,7 +248,8 @@ class API extends \Piwik\Plugin\API
         }
 
         // calculate total visits/actions/revenue
-        $this->setMetricsTotalsMetadata($dataTable, $apiMetrics);
+        $totalMetrics = $this->preformatApiMetricsForTotalsCalculation($apiMetrics);
+        $this->setMetricsTotalsMetadata($dataTable, $totalMetrics);
 
         // if the period isn't a range & a lastN/previousN date isn't used, we get the same
         // data for the last period to show the evolution of visits/actions/revenue
@@ -421,6 +422,17 @@ class API extends \Piwik\Plugin\API
         return $metrics;
     }
 
+    private function preformatApiMetricsForTotalsCalculation($apiMetrics)
+    {
+        $metrics = array();
+        foreach ($apiMetrics as $label => $metricsInfo) {
+            $totalMetadataName = self::getTotalMetadataName($label);
+            $metrics[$totalMetadataName] = $metricsInfo[self::METRIC_RECORD_NAME_KEY];
+        }
+
+        return $metrics;
+    }
+
     /**
      * Sets the total visits, actions & revenue for a DataTable returned by
      * $this->buildDataTable.
@@ -437,21 +449,17 @@ class API extends \Piwik\Plugin\API
             }
         } else {
             $totals = array();
-            foreach ($apiMetrics as $label => $metricInfo) {
-                $totalMetadataName = self::getTotalMetadataName($label);
-                $totals[$totalMetadataName] = 0;
+            foreach ($apiMetrics as $label => $recordName) {
+                $totals[$label] = 0;
             }
 
             foreach ($dataTable->getRows() as $row) {
-                foreach ($apiMetrics as $label => $metricInfo) {
-                    $totalMetadataName = self::getTotalMetadataName($label);
-                    $totals[$totalMetadataName] += $row->getColumn($metricInfo[self::METRIC_RECORD_NAME_KEY]);
+                foreach ($apiMetrics as $totalMetadataName => $recordName) {
+                    $totals[$totalMetadataName] += $row->getColumn($recordName);
                 }
             }
 
-            foreach ($totals as $name => $value) {
-                $dataTable->setMetadata($name, $value);
-            }
+            $dataTable->setMetadataValues($totals);
         }
     }
 
@@ -473,7 +481,7 @@ class API extends \Piwik\Plugin\API
     private function addMissingWebsites($dataTable, $fieldsToGet, $sitesToProblablyAdd)
     {
         $siteIdsInDataTable = array();
-        foreach ($dataTable->getRows() as $row) {
+        foreach ($dataTable->getRowsWithoutSummaryRow() as $row) {
             /** @var DataTable\Row $row */
             $siteIdsInDataTable[] = $row->getColumn('label');
         }
@@ -482,23 +490,7 @@ class API extends \Piwik\Plugin\API
             if (!in_array($site['idsite'], $siteIdsInDataTable)) {
                 $siteRow = array_combine($fieldsToGet, array_pad(array(), count($fieldsToGet), 0));
                 $siteRow['label'] = (int) $site['idsite'];
-                $dataTable->addRowFromSimpleArray($siteRow);
-            }
-        }
-    }
-
-    private function removeEcommerceRelatedMetricsOnNonEcommercePiwikSites($dataTable, $apiECommerceMetrics)
-    {
-        // $dataTableRows instanceOf Row[]
-        $dataTableRows = $dataTable->getRows();
-
-        foreach ($dataTableRows as $dataTableRow) {
-            $siteId = $dataTableRow->getColumn('label');
-            if (!Site::isEcommerceEnabledFor($siteId)) {
-                foreach ($apiECommerceMetrics as $metricSettings) {
-                    $dataTableRow->deleteColumn($metricSettings[self::METRIC_RECORD_NAME_KEY]);
-                    $dataTableRow->deleteColumn($metricSettings[self::METRIC_EVOLUTION_COL_NAME_KEY]);
-                }
+                $dataTable->addRow(new Row(array(Row::COLUMNS => $siteRow)));
             }
         }
     }

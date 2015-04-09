@@ -49,10 +49,13 @@ class Controller extends \Piwik\Plugin\Controller
     {
         $pattern = Common::getRequestVar('pattern', '', 'string');
         $limit   = Common::getRequestVar('filter_limit', 0, 'int');
+        $period  = Common::getRequestVar('period', null, 'string');
+        $date    = Common::getRequestVar('date', null, 'string');
+        $segment = Common::getRequestVar('segment', false, 'string');
         $request = $_GET + $_POST;
 
         $dashboard = new Dashboard();
-        $sites = $dashboard->getAllWithGroups($request, $pattern, $limit);
+        $sites = $dashboard->getAllWithGroups($request, $period, $date, $segment, $pattern, $limit);
 
         return json_encode($sites);
     }

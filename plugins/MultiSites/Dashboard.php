@@ -25,25 +25,30 @@ class Dashboard
      * @param int $limit
      * @return array
      */
-    public function getAllWithGroups($request, $pattern, $limit)
+    public function getAllWithGroups($request, $period, $date, $segment, $pattern, $limit)
     {
         /** @var DataTable $sites */
         $sites = Request::processRequest('MultiSites.getAll', array(
-            'enhanced' => true,
-            'pattern' => false,
-            'filter_limit' => -1,
-            'filter_sort_column' => '',
-            'filter_pattern' => '',
             'format_metrics' => 0,
-            'totals' => 1
+            'totals' => 0,
+            'disable_generic_filters' => '1'
+        ), array(
+            'enhanced' => '1',
+            'period' => $period,
+            'date' => $date,
+            'segment' => $segment ?: false
         ));
         $sites->deleteRow(DataTable::ID_SUMMARY_ROW);
 
         $numSites = $sites->getRowsCount();
-        $totals   = $sites->getMetadata('totals');
-        $totals['nb_pageviews'] = $this->calculateTotalPageviews($sites);
+        $totals   = array(
+            'nb_pageviews' => $sites->getMetadata('total_nb_pageviews'),
+            'nb_visits' => $sites->getMetadata('total_nb_visits'),
+            'revenue' => $sites->getMetadata('total_revenue'),
+        );
 
         $sitesByGroup = $this->moveSitesHavingAGroupIntoSubtables($sites);
+        $sitesByGroup->disableFilter('Sort');
 
         if ($pattern !== '') {
             // apply search, we need to make sure to always include the parent group the site belongs to
@@ -64,21 +69,6 @@ class Dashboard
             'totals'   => $totals,
             'sites'    => $sitesFlat,
         );
-    }
-
-    private function calculateTotalPageviews(DataTable $sites)
-    {
-        $total = 0;
-
-        foreach ($sites->getRowsWithoutSummaryRow() as $site) {
-            $numPageviews = $site->getColumn('nb_pageviews');
-
-            if (false !== $numPageviews) {
-                $total += $numPageviews;
-            }
-        }
-
-        return $total;
     }
 
     private function convertDataTableToArray(DataTable $table, $request)
