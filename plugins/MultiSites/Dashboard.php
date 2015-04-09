@@ -15,6 +15,7 @@ use Piwik\Period;
 use Piwik\DataTable;
 use Piwik\DataTable\Row;
 use Piwik\DataTable\Row\DataTableSummaryRow;
+use Piwik\Site;
 use Piwik\View;
 
 class Dashboard
@@ -27,17 +28,22 @@ class Dashboard
      */
     public function getAllWithGroups($request, $period, $date, $segment, $pattern, $limit)
     {
-        /** @var DataTable $sites */
+        $segment = $segment ?: false;
+        $sites = API::getInstance()->getAll($period, $date, $segment, $_restrictSitesToLogin = false, $enhanced = true);
+
+        /** @var DataTable $sites
         $sites = Request::processRequest('MultiSites.getAll', array(
             'format_metrics' => 0,
             'totals' => 0,
-            'disable_generic_filters' => '1'
+            'disable_generic_filters' => '1',
+            'disable_queued_filters' => '1',
+            'disable_compute_processed_metrics' => '1'
         ), array(
             'enhanced' => '1',
             'period' => $period,
             'date' => $date,
             'segment' => $segment ?: false
-        ));
+        ));*/
         $sites->deleteRow(DataTable::ID_SUMMARY_ROW);
 
         $numSites = $sites->getRowsCount();
@@ -48,7 +54,6 @@ class Dashboard
         );
 
         $sitesByGroup = $this->moveSitesHavingAGroupIntoSubtables($sites);
-        $sitesByGroup->disableFilter('Sort');
 
         if ($pattern !== '') {
             // apply search, we need to make sure to always include the parent group the site belongs to
@@ -88,7 +93,10 @@ class Dashboard
     {
         /** @var DataTableSummaryRow[] $groups */
         $groups = array();
+
+        $sites->filter('ColumnCallbackReplace', array('label', '\Piwik\Site::getNameFor'));
         $sitesByGroup = $sites->getEmptyClone(true);
+        $sitesByGroup->disableFilter('ColumnCallbackReplace');
 
         foreach ($sites->getRowsWithoutSummaryRow() as $index => $site) {
 
@@ -142,19 +150,26 @@ class Dashboard
         foreach ($sitesByGroup->getRowsWithoutSummaryRow() as $index => $site) {
 
             $label = strtolower($site->getColumn('label'));
-            $group = strtolower($site->getColumn('group'));
+            $labelMatches = false !== strpos($label, $pattern);
 
             if ($site->getMetadata('isGroup')) {
                 $subtable = $site->getSubtable();
                 // filter subtable
                 $this->nestedSearch($subtable, $pattern);
 
-                if (!$subtable->getRowsCount() && false === strpos($label, $pattern)) {
+                if (!$subtable->getRowsCount() && !$labelMatches) {
                     $sitesByGroup->deleteRow($index);
                 }
 
-            } elseif (false === strpos($label, $pattern) && (!$group || false === strpos($group, $pattern))) {
-                $sitesByGroup->deleteRow($index);
+            } else {
+
+                if (!$labelMatches) {
+                    $group = $site->getColumn('group');
+
+                    if (!$group || false === strpos(strtolower($group), $pattern)) {
+                        $sitesByGroup->deleteRow($index);
+                    }
+                }
             }
         }
     }
