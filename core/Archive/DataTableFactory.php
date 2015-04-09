@@ -157,6 +157,8 @@ class DataTableFactory
      */
     public function make($index, $resultIndices)
     {
+        $keyMetadata = $this->getDefaultMetadata();
+
         if (empty($resultIndices)) {
             // for numeric data, if there's no index (and thus only 1 site & period in the query),
             // we want to display every queried metric name
@@ -166,12 +168,10 @@ class DataTableFactory
                 $index = $this->defaultRow;
             }
 
-            $dataTable = $this->createDataTable($index, $keyMetadata = array());
+            $dataTable = $this->createDataTable($index, $keyMetadata);
         } else {
-            $dataTable = $this->createDataTableMapFromIndex($index, $resultIndices, $keyMetadata = array());
+            $dataTable = $this->createDataTableMapFromIndex($index, $resultIndices, $keyMetadata);
         }
-
-        $this->transformMetadata($dataTable);
 
         return $dataTable;
     }
@@ -190,16 +190,16 @@ class DataTableFactory
      * @param array $blobRow
      * @return DataTable|DataTable\Map
      */
-    private function makeFromBlobRow($blobRow)
+    private function makeFromBlobRow($blobRow, $keyMetadata)
     {
         if ($blobRow === false) {
             return new DataTable();
         }
 
         if (count($this->dataNames) === 1) {
-            return $this->makeDataTableFromSingleBlob($blobRow);
+            return $this->makeDataTableFromSingleBlob($blobRow, $keyMetadata);
         } else {
-            return $this->makeIndexedByRecordNameDataTable($blobRow);
+            return $this->makeIndexedByRecordNameDataTable($blobRow, $keyMetadata);
         }
     }
 
@@ -211,7 +211,7 @@ class DataTableFactory
      * @param array $blobRow
      * @return DataTable
      */
-    private function makeDataTableFromSingleBlob($blobRow)
+    private function makeDataTableFromSingleBlob($blobRow, $keyMetadata)
     {
         $recordName = reset($this->dataNames);
         if ($this->idSubtable !== null) {
@@ -225,7 +225,7 @@ class DataTableFactory
         }
 
         // set table metadata
-        $table->setMetadataValues(DataCollection::getDataRowMetadata($blobRow));
+        $table->setAllTableMetadata(array_merge(DataCollection::getDataRowMetadata($blobRow), $keyMetadata));
 
         if ($this->expandDataTable) {
             $table->enableRecursiveFilters();
@@ -242,12 +242,12 @@ class DataTableFactory
      * @param array $blobRow
      * @return DataTable\Map
      */
-    private function makeIndexedByRecordNameDataTable($blobRow)
+    private function makeIndexedByRecordNameDataTable($blobRow, $keyMetadata)
     {
         $table = new DataTable\Map();
         $table->setKeyName('recordName');
 
-        $tableMetadata = DataCollection::getDataRowMetadata($blobRow);
+        $tableMetadata = array_merge(DataCollection::getDataRowMetadata($blobRow), $keyMetadata);
 
         foreach ($blobRow as $name => $blob) {
             $newTable = DataTable::fromSerializedArray($blob);
@@ -267,23 +267,27 @@ class DataTableFactory
      * @param array $keyMetadata The metadata to add to the table when it's created.
      * @return DataTable\Map
      */
-    private function createDataTableMapFromIndex($index, $resultIndices, $keyMetadata = array())
+    private function createDataTableMapFromIndex($index, $resultIndices, $keyMetadata)
     {
-        $resultIndexLabel = reset($resultIndices);
+        $result = new DataTable\Map();
+        $result->setKeyName(reset($resultIndices));
         $resultIndex = key($resultIndices);
 
         array_shift($resultIndices);
 
-        $result = new DataTable\Map();
-        $result->setKeyName($resultIndexLabel);
+        $hasIndices = !empty($resultIndices);
 
         foreach ($index as $label => $value) {
-            $keyMetadata[$resultIndex] = $label;
-
-            if (empty($resultIndices)) {
-                $newTable = $this->createDataTable($value, $keyMetadata);
+            if ($resultIndex === DataTableFactory::TABLE_METADATA_SITE_INDEX) {
+                $keyMetadata[$resultIndex] = new Site($label);
             } else {
+                $keyMetadata[$resultIndex] = $this->periods[$label];
+            }
+
+            if ($hasIndices) {
                 $newTable = $this->createDataTableMapFromIndex($value, $resultIndices, $keyMetadata);
+            } else {
+                $newTable = $this->createDataTable($value, $keyMetadata);
             }
 
             $result->addTable($newTable, $this->prettifyIndexLabel($resultIndex, $label));
@@ -302,11 +306,11 @@ class DataTableFactory
     private function createDataTable($data, $keyMetadata)
     {
         if ($this->dataType == 'blob') {
-            $result = $this->makeFromBlobRow($data);
+            $result = $this->makeFromBlobRow($data, $keyMetadata);
         } else {
-            $result = $this->makeFromMetricsArray($data);
+            $result = $this->makeFromMetricsArray($data, $keyMetadata);
         }
-        $this->setTableMetadata($keyMetadata, $result);
+
         return $result;
     }
 
@@ -359,17 +363,12 @@ class DataTableFactory
         }
     }
 
-    /**
-     * Converts site IDs and period string ranges into Site instances and
-     * Period instances in DataTable metadata.
-     */
-    private function transformMetadata(DataTableInterface $table)
+    private function getDefaultMetadata()
     {
-        $periods = $this->periods;
-        $table->filter(function (DataTable $table) use ($periods) {
-            $table->setMetadata(DataTableFactory::TABLE_METADATA_SITE_INDEX, new Site($table->getMetadata(DataTableFactory::TABLE_METADATA_SITE_INDEX)));
-            $table->setMetadata(DataTableFactory::TABLE_METADATA_PERIOD_INDEX, $periods[$table->getMetadata(DataTableFactory::TABLE_METADATA_PERIOD_INDEX)]);
-        });
+        return array(
+            DataTableFactory::TABLE_METADATA_SITE_INDEX => new Site(reset($this->sitesId)),
+            DataTableFactory::TABLE_METADATA_PERIOD_INDEX => reset($this->periods),
+        );
     }
 
     /**
@@ -388,36 +387,15 @@ class DataTableFactory
     }
 
     /**
-     * @param $keyMetadata
-     * @param $result
-     */
-    private function setTableMetadata($keyMetadata, DataTableInterface $result)
-    {
-        if (!isset($keyMetadata[DataTableFactory::TABLE_METADATA_SITE_INDEX])) {
-            $keyMetadata[DataTableFactory::TABLE_METADATA_SITE_INDEX] = reset($this->sitesId);
-        }
-
-        if (!isset($keyMetadata[DataTableFactory::TABLE_METADATA_PERIOD_INDEX])) {
-            reset($this->periods);
-            $keyMetadata[DataTableFactory::TABLE_METADATA_PERIOD_INDEX] = key($this->periods);
-        }
-
-        // Note: $result can be a DataTable\Map
-        $result->filter(function (DataTable $table) use ($keyMetadata) {
-            $table->setMetadataValues($keyMetadata);
-        });
-    }
-
-    /**
      * @param $data
      * @return DataTable\Simple
      */
-    private function makeFromMetricsArray($data)
+    private function makeFromMetricsArray($data, $keyMetadata)
     {
         $table = new DataTable\Simple();
 
         if (!empty($data)) {
-            $table->setAllTableMetadata(DataCollection::getDataRowMetadata($data));
+            $table->setAllTableMetadata(array_merge(DataCollection::getDataRowMetadata($data), $keyMetadata));
 
             DataCollection::removeMetadataFromDataRow($data);
 
@@ -434,6 +412,8 @@ class DataTableFactory
                 $name = reset($this->dataNames);
                 $table->addRow(new Row(array(Row::COLUMNS => array($name => 0))));
             }
+
+            $table->setAllTableMetadata($keyMetadata);
         }
 
         $result = $table;
