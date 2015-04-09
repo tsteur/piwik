@@ -81,6 +81,25 @@ class Site
         foreach($sites as $idsite => $site) {
             self::setSite($idsite, $site);
         }
+
+        /**
+         * Triggered so plugins can modify website entities without modifying the database.
+         *
+         * This event should **not** be used to add data that is expensive to compute. If you
+         * need to make HTTP requests or query the database for more information, this is not
+         * the place to do it.
+         *
+         * **Example**
+         *
+         *     Piwik::addAction('Site.setSites', function (&$sites) {
+         *         foreach ($sites as &$site) {
+         *             $site['name'] .= " (original)";
+         *         }
+         *     });
+         *
+         * @param array $sites An array of website entities. [Learn more.](/guides/persistence-and-the-mysql-backend#websites-aka-sites)
+         */
+        Piwik::postEvent('Site.setSites', array(&$sites));
     }
 
     /**
@@ -98,24 +117,6 @@ class Site
         if (empty($idSite) || empty($infoSite)) {
             throw new UnexpectedWebsiteFoundException("An unexpected website was found, check idSite in the request.");
         }
-
-        /**
-         * Triggered so plugins can modify website entities without modifying the database.
-         *
-         * This event should **not** be used to add data that is expensive to compute. If you
-         * need to make HTTP requests or query the database for more information, this is not
-         * the place to do it.
-         *
-         * **Example**
-         *
-         *     Piwik::addAction('Site.setSite', function ($idSite, &$info) {
-         *         $info['name'] .= " (original)";
-         *     });
-         *
-         * @param int $idSite The ID of the website entity that will be modified.
-         * @param array $infoSite The website entity. [Learn more.](/guides/persistence-and-the-mysql-backend#websites-aka-sites)
-         */
-        Piwik::postEvent('Site.setSite', array($idSite, &$infoSite));
 
         self::$infoSites[$idSite] = $infoSite;
     }
