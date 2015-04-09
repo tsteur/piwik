@@ -82,9 +82,10 @@ class API extends \Piwik\Plugin\API
      *                                        Only used when a scheduled task is running
      * @param bool|string $enhanced When true, return additional goal & ecommerce metrics
      * @param bool|string $pattern If specified, only the website which names (or site ID) match the pattern will be returned using SitesManager.getPatternMatchSites
+     * @param array $showColumns If specified, only the requested columns will be fetched
      * @return DataTable
      */
-    public function getAll($period, $date, $segment = false, $_restrictSitesToLogin = false, $enhanced = false, $pattern = false)
+    public function getAll($period, $date, $segment = false, $_restrictSitesToLogin = false, $enhanced = false, $pattern = false, $showColumns = array())
     {
         Piwik::checkUserHasSomeViewAccess();
 
@@ -101,7 +102,8 @@ class API extends \Piwik\Plugin\API
             $segment,
             $_restrictSitesToLogin,
             $enhanced,
-            $multipleWebsitesRequested = true
+            $multipleWebsitesRequested = true,
+            $showColumns
         );
     }
 
@@ -186,7 +188,8 @@ class API extends \Piwik\Plugin\API
             $segment,
             $_restrictSitesToLogin,
             $enhanced,
-            $multipleWebsitesRequested = false
+            $multipleWebsitesRequested = false,
+            $showColumns = array()
         );
     }
 
@@ -198,7 +201,7 @@ class API extends \Piwik\Plugin\API
         return $sites;
     }
 
-    private function buildDataTable($sitesToProblablyAdd, $period, $date, $segment, $_restrictSitesToLogin, $enhanced, $multipleWebsitesRequested)
+    private function buildDataTable($sitesToProblablyAdd, $period, $date, $segment, $_restrictSitesToLogin, $enhanced, $multipleWebsitesRequested, $showColumns)
     {
         $idSites = array();
         if (!empty($sitesToProblablyAdd)) {
@@ -222,6 +225,10 @@ class API extends \Piwik\Plugin\API
         $apiECommerceMetrics = array();
         $apiMetrics = API::getApiMetrics($enhanced);
         foreach ($apiMetrics as $metricName => $metricSettings) {
+            if (!empty($showColumns) && !in_array($metricName, $showColumns)) {
+                unset($apiMetrics[$metricName]);
+                continue;
+            }
             $fieldsToGet[] = $metricSettings[self::METRIC_RECORD_NAME_KEY];
             $columnNameRewrites[$metricSettings[self::METRIC_RECORD_NAME_KEY]] = $metricName;
 
@@ -279,9 +286,10 @@ class API extends \Piwik\Plugin\API
         }
 
         // move the site id to a metadata column
-        $dataTable->filter('ColumnCallbackAddMetadata', array('label', 'group', array('\Piwik\Site', 'getGroupFor'), array()));
-        $dataTable->filter('ColumnCallbackAddMetadata', array('label', 'main_url', array('\Piwik\Site', 'getMainUrlFor'), array()));
         $dataTable->filter('ColumnCallbackAddMetadata', array('label', 'idsite'));
+        $dataTable->queueFilter('MetadataCallbackAddMetadata', array('idsite', 'group', array('\Piwik\Site', 'getGroupFor'), array()));
+        $dataTable->queueFilter('MetadataCallbackAddMetadata', array('idsite', 'main_url', array('\Piwik\Site', 'getMainUrlFor'), array()));
+
 
         // set the label of each row to the site name
         if ($multipleWebsitesRequested) {

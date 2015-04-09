@@ -29,25 +29,15 @@ class Dashboard
     public function getAllWithGroups($request, $period, $date, $segment, $pattern, $limit)
     {
         $segment = $segment ?: false;
-        $sites = API::getInstance()->getAll($period, $date, $segment, $_restrictSitesToLogin = false, $enhanced = true);
-
-        /** @var DataTable $sites
-        $sites = Request::processRequest('MultiSites.getAll', array(
-            'format_metrics' => 0,
-            'totals' => 0,
-            'disable_generic_filters' => '1',
-            'disable_queued_filters' => '1',
-            'disable_compute_processed_metrics' => '1'
-        ), array(
-            'enhanced' => '1',
-            'period' => $period,
-            'date' => $date,
-            'segment' => $segment ?: false
-        ));*/
+        $showColumns = array(
+            'nb_visits', 'nb_pageviews', 'revenue'
+        );
+        $sites = API::getInstance()->getAll($period, $date, $segment, $_restrictSitesToLogin = false,
+                                            $enhanced = true, false, $showColumns);
         $sites->deleteRow(DataTable::ID_SUMMARY_ROW);
 
         $numSites = $sites->getRowsCount();
-        $totals   = array(
+        $totals = array(
             'nb_pageviews' => $sites->getMetadata('total_nb_pageviews'),
             'nb_visits' => $sites->getMetadata('total_nb_visits'),
             'revenue' => $sites->getMetadata('total_revenue'),
@@ -97,10 +87,19 @@ class Dashboard
         $sites->filter('ColumnCallbackReplace', array('label', '\Piwik\Site::getNameFor'));
         $sitesByGroup = $sites->getEmptyClone(true);
         $sitesByGroup->disableFilter('ColumnCallbackReplace');
+        $sitesByGroup->disableFilter('MetadataCallbackAddMetadata');
+        $sitesByGroup->queueFilter(function (DataTable $table) {
+            foreach ($table->getRows() as $row) {
+                $idSite = $row->getMetadata('idsite');
+                if ($idSite !== false) {
+                    $row->setMetadata('main_url', Site::getMainUrlFor($idSite));
+                }
+            }
+        });
 
         foreach ($sites->getRowsWithoutSummaryRow() as $index => $site) {
 
-            $group = $site->getMetadata('group');
+            $group = Site::getGroupFor($site->getMetadata('idsite'));
 
             if (!empty($group) && !array_key_exists($group, $groups)) {
                 $row = new DataTableSummaryRow();

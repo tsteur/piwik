@@ -404,9 +404,7 @@ class DataTableFactory
 
         // Note: $result can be a DataTable\Map
         $result->filter(function (DataTable $table) use ($keyMetadata) {
-            foreach ($keyMetadata as $name => $value) {
-                $table->setMetadata($name, $value);
-            }
+            $table->setMetadataValues($keyMetadata);
         });
     }
 
