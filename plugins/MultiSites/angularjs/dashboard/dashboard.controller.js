@@ -21,7 +21,8 @@
         $scope.period = piwik.period;
 
         this.refresh = function (interval) {
-            multisitesDashboardModel.fetchAllSites(interval);
+            multisitesDashboardModel.refreshInterval = interval;
+            multisitesDashboardModel.fetchAllSites();
         };
     }
 })();

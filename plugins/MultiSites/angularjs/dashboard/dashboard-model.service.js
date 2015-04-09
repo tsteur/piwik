@@ -8,6 +8,8 @@
 
     function multisitesDashboardModel(piwikApi, $filter, $timeout) {
 
+        var refreshPromise = null;
+
         // those sites are going to be displayed
         var model = {
             sites        : [],
@@ -32,12 +34,21 @@
             sortBy: sortBy,
             reverse: true,
             sortColumn: 'nb_visits',
-            fetchAllSites: fetchAllSites
+            fetchAllSites: fetchAllSites,
+            refreshInterval: 0
         };
 
         fetchPreviousSummary();
 
         return model;
+
+        function cancelRefereshInterval()
+        {
+            if (refreshPromise) {
+                $timeout.cancel(refreshPromise);
+                refreshPromise = null;
+            };
+        }
 
         function onError () {
             model.errorLoadingSites = true;
@@ -57,7 +68,6 @@
                 site.revenue_evolution   = parseInt(site.revenue_evolution, 10);
             });
 
-            model.totalActions  = report.totals.nb_pageviews;
             model.totalActions  = report.totals.nb_pageviews;
             model.totalVisits   = report.totals.nb_visits;
             model.totalRevenue  = report.totals.revenue;
@@ -147,10 +157,11 @@
             });
         }
 
-        function fetchAllSites(refreshInterval) {
+        function fetchAllSites() {
 
             if (model.isLoading) {
                 piwikApi.abort();
+                cancelRefereshInterval();
             }
 
             model.isLoading = true;
@@ -183,10 +194,13 @@
             }, onError)['finally'](function () {
                 model.isLoading = false;
 
-                if (refreshInterval && refreshInterval > 0) {
-                    $timeout(function () {
-                        fetchAllSites(refreshInterval);
-                    }, refreshInterval * 1000);
+                if (model.refreshInterval && model.refreshInterval > 0) {
+                    cancelRefereshInterval();
+
+                    refreshPromise = $timeout(function () {
+                        refreshPromise = null;
+                        fetchAllSites(model.refreshInterval);
+                    }, model.refreshInterval * 1000);
                 }
             });
         }

@@ -39,8 +39,9 @@ class Dashboard
         ));
         $sites->deleteRow(DataTable::ID_SUMMARY_ROW);
 
-        $totals   = $sites->getMetadata('totals');
         $numSites = $sites->getRowsCount();
+        $totals   = $sites->getMetadata('totals');
+        $totals['nb_pageviews'] = $this->calculateTotalPageviews($sites);
 
         $sitesByGroup = $this->moveSitesHavingAGroupIntoSubtables($sites);
 
@@ -63,6 +64,21 @@ class Dashboard
             'totals'   => $totals,
             'sites'    => $sitesFlat,
         );
+    }
+
+    private function calculateTotalPageviews(DataTable $sites)
+    {
+        $total = 0;
+
+        foreach ($sites->getRowsWithoutSummaryRow() as $site) {
+            $numPageviews = $site->getColumn('nb_pageviews');
+
+            if (false !== $numPageviews) {
+                $total += $numPageviews;
+            }
+        }
+
+        return $total;
     }
 
     private function convertDataTableToArray(DataTable $table, $request)
