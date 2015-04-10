@@ -280,10 +280,9 @@ class DataTableFactory
         foreach ($index as $label => $value) {
             if ($resultIndex === DataTableFactory::TABLE_METADATA_SITE_INDEX) {
                 $keyMetadata[$resultIndex] = new Site($label);
-            } else {
+            } elseif ($resultIndex === DataTableFactory::TABLE_METADATA_PERIOD_INDEX) {
                 $keyMetadata[$resultIndex] = $this->periods[$label];
             }
-
             if ($hasIndices) {
                 $newTable = $this->createDataTableMapFromIndex($value, $resultIndices, $keyMetadata);
             } else {

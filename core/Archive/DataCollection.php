@@ -303,9 +303,16 @@ class DataCollection
                 $indexKeyValues = array_keys($this->periods);
             }
 
-            foreach ($indexKeyValues as $key) {
-                $result[$key] = $this->createOrderedIndex($metadataNamesToIndexBy);
+            if (empty($metadataNamesToIndexBy)) {
+                foreach ($indexKeyValues as $key) {
+                    $result[$key] = array();
+                }
+            } else {
+                foreach ($indexKeyValues as $key) {
+                    $result[$key] = $this->createOrderedIndex($metadataNamesToIndexBy);
+                }
             }
+
         }
 
         return $result;
