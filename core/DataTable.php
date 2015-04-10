@@ -1133,12 +1133,12 @@ class DataTable implements DataTableInterface, \IteratorAggregate, \ArrayAccess
         }
 
         if (is_null($limit)) {
-            $spliced = array_splice($this->rows, $offset);
+            array_splice($this->rows, $offset);
         } else {
-            $spliced = array_splice($this->rows, $offset, $limit);
+            array_splice($this->rows, $offset, $limit);
         }
-        $countDeleted = count($spliced);
-        return $countDeleted;
+
+        return $count - $this->getRowsCount();
     }
 
     /**

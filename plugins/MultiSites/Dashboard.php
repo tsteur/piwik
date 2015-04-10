@@ -35,6 +35,15 @@ class Dashboard
         $sites = API::getInstance()->getAll($period, $date, $segment, $_restrictSitesToLogin = false,
                                             $enhanced = true, false, $showColumns);
         $sites->deleteRow(DataTable::ID_SUMMARY_ROW);
+        $sites->filter(function (DataTable $table) {
+            foreach ($table->getRows() as $row) {
+                $idSite = $row->getColumn('label');
+                $site = Site::getSite($idSite);
+                $row->setColumn('label', $site['name']);
+                $row->setColumn('main_url', $site['main_url']);
+                $row->setColumn('group', $site['group']);
+            }
+        });
 
         $numSites = $sites->getRowsCount();
         $totals = array(
@@ -84,27 +93,18 @@ class Dashboard
         /** @var DataTableSummaryRow[] $groups */
         $groups = array();
 
-        $sites->filter('ColumnCallbackReplace', array('label', '\Piwik\Site::getNameFor'));
         $sitesByGroup = $sites->getEmptyClone(true);
         $sitesByGroup->disableFilter('ColumnCallbackReplace');
         $sitesByGroup->disableFilter('MetadataCallbackAddMetadata');
-        $sitesByGroup->queueFilter(function (DataTable $table) {
-            foreach ($table->getRows() as $row) {
-                $idSite = $row->getMetadata('idsite');
-                if ($idSite !== false) {
-                    $row->setMetadata('main_url', Site::getMainUrlFor($idSite));
-                }
-            }
-        });
 
-        foreach ($sites->getRowsWithoutSummaryRow() as $index => $site) {
+        foreach ($sites->getRows() as $index => $site) {
 
-            $group = Site::getGroupFor($site->getMetadata('idsite'));
+            $group = $site->getColumn('group');
 
             if (!empty($group) && !array_key_exists($group, $groups)) {
                 $row = new DataTableSummaryRow();
-                $row->setColumns(array('label' => $group));
-                $row->setMetadata('isGroup', true);
+                $row->setColumn('label', $group);
+                $row->setColumn('isGroup', true);
                 $row->setSubtable($sites->getEmptyClone(true));
                 $sitesByGroup->addRow($row);
 
@@ -146,17 +146,17 @@ class Dashboard
 
     private function nestedSearch(DataTable $sitesByGroup, $pattern)
     {
-        foreach ($sitesByGroup->getRowsWithoutSummaryRow() as $index => $site) {
+        foreach ($sitesByGroup->getRows() as $index => $site) {
 
             $label = strtolower($site->getColumn('label'));
             $labelMatches = false !== strpos($label, $pattern);
 
-            if ($site->getMetadata('isGroup')) {
+            if ($site->getColumn('isGroup')) {
                 $subtable = $site->getSubtable();
                 // filter subtable
                 $this->nestedSearch($subtable, $pattern);
 
-                if (!$subtable->getRowsCount() && !$labelMatches) {
+                if (!$labelMatches && !$subtable->getRowsCount()) {
                     $sitesByGroup->deleteRow($index);
                 }
 
