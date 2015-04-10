@@ -357,6 +357,17 @@ class Archive
     }
 
     /**
+     * @todo describe!
+     * @return DataTable|DataTable\Map
+     */
+    public function getDataTableFromNumericAndMergeChildren($names)
+    {
+        $data  = $this->get($names, 'numeric');
+        $resultIndexes = $this->getResultIndices();
+        return $data->getMergedDataTable($resultIndexes);
+    }
+
+    /**
      * Queries and returns one or more reports as DataTable instances.
      *
      * This method will query blob data that is a serialized array of of {@link DataTable\Row}'s and

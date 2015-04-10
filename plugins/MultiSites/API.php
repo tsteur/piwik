@@ -239,12 +239,14 @@ class API extends \Piwik\Plugin\API
 
         // get the data
         // $dataTable instanceOf Set
-        $dataTable = $archive->getDataTableFromNumeric($fieldsToGet);
+        $dataTable = $archive->getDataTableFromNumericAndMergeChildren($fieldsToGet);
+   //     $dataTable = $archive->getDataTableFromNumeric($fieldsToGet);
 
         if ($multipleWebsitesRequested && count($idSites) === 1 && Range::isMultiplePeriod($date, $period)) {
         } else {
-            $dataTable = $this->mergeDataTableMapAndPopulateLabel($idSites, $multipleWebsitesRequested, $dataTable);
+           // $dataTable = $this->mergeDataTableMapAndPopulateLabel($idSites, $multipleWebsitesRequested, $dataTable);
         }
+
 
         if ($dataTable instanceof DataTable\Map) {
             foreach ($dataTable->getDataTables() as $table) {
@@ -272,13 +274,14 @@ class API extends \Piwik\Plugin\API
             }
 
             $pastArchive = Archive::build($idSites, $period, $strLastDate, $segment, $_restrictSitesToLogin);
+            $pastData = $pastArchive->getDataTableFromNumericAndMergeChildren($fieldsToGet);
 
-            $pastData = $pastArchive->getDataTableFromNumeric($fieldsToGet);
+           // $pastData = $pastArchive->getDataTableFromNumeric($fieldsToGet);
 
             if ($multipleWebsitesRequested && count($idSites) === 1 && Range::isMultiplePeriod($date, $period)) {
 
             } else {
-                $pastData = $this->mergeDataTableMapAndPopulateLabel($idSites, $multipleWebsitesRequested, $pastData);
+            //    $pastData = $this->mergeDataTableMapAndPopulateLabel($idSites, $multipleWebsitesRequested, $pastData);
             }
 
             // use past data to calculate evolution percentages

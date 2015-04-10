@@ -153,9 +153,13 @@ class ArchiveSelector
             throw new \Exception("Website IDs could not be read from the request, ie. idSite=");
         }
 
+        foreach ($siteIds as $index => $siteId) {
+            $siteIds[$index] = (int) $siteId;
+        }
+
         $getArchiveIdsSql = "SELECT idsite, name, date1, date2, MAX(idarchive) as idarchive
                                FROM %s
-                              WHERE idsite IN (" . Common::getSqlStringFieldsArray($siteIds) . ")
+                              WHERE idsite IN (" . implode(',', $siteIds) . ")
                                 AND " . self::getNameCondition($plugins, $segment) . "
                                 AND %s
                            GROUP BY idsite, date1, date2";
@@ -172,7 +176,7 @@ class ArchiveSelector
         foreach ($monthToPeriods as $table => $periods) {
             $firstPeriod = reset($periods);
 
-            $bind = array_values($siteIds);
+            $bind = array();
 
             if ($firstPeriod instanceof Range) {
                 $dateCondition = "period = ? AND date1 = ? AND date2 = ?";

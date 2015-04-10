@@ -214,6 +214,25 @@ class DataCollection
     }
 
     /**
+     * @todo describe!
+     * @return DataTable|DataTable\Map
+     */
+    public function getMergedDataTable($resultIndices)
+    {
+        if ($this->dataType != 'numeric') {
+            throw new Exception("DataCollection: cannot call getExpandedDataTable with "
+                . "{$this->dataType} data types. Only works with blob data.");
+        }
+
+        $dataTableFactory = new DataTableFactory(
+            $this->dataNames, 'blob', $this->sitesId, $this->periods, $this->defaultRow);
+
+        $index = $this->getIndexedArray($resultIndices);
+
+        return $dataTableFactory->makeMerged($index, $resultIndices);
+    }
+
+    /**
      * Returns archive data as a DataTable indexed by metadata. Indexed data will
      * be represented by Map instances. Each DataTable will have
      * its subtable IDs set.

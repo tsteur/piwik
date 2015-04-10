@@ -177,6 +177,46 @@ class DataTableFactory
     }
 
     /**
+     * @todo DESCRIBE
+     * @return DataTable|DataTable\Map
+     */
+    public function makeMerged($index, $resultIndices)
+    {
+        $metadata = $this->getDefaultMetadata();
+        if (count($resultIndices) == 2) {
+            $tables = array();
+            foreach ($this->periods as $range => $period) {
+                $metadata[self::TABLE_METADATA_PERIOD_INDEX] = $period;
+                $tables[$range] = new DataTable();
+                $tables[$range]->setAllTableMetadata($metadata);
+            }
+            foreach ($index as $idsite => $table) {
+                foreach ($table as $period => $row) {
+                    if (!empty($row)) {
+                        $row['label'] = $idsite;
+                        $tables[$period]->addRow(new Row(array(Row::COLUMNS => $row)));
+                    }
+                }
+            }
+            $dataTable = new DataTable\Map();
+            foreach ($this->periods as $range => $period) {
+                $label = $this->prettifyIndexLabel(self::TABLE_METADATA_PERIOD_INDEX, $range);
+                $dataTable->addTable($tables[$range], $label);
+            }
+        } else {
+            $dataTable = new DataTable();
+            $dataTable->setAllTableMetadata($metadata);
+            foreach ($index as $i => $row) {
+                if (!empty($row)) {
+                    $row['label'] = $i;
+                    $dataTable->addRow(new Row(array(Row::COLUMNS => $row)));
+                }
+            }
+        }
+        return $dataTable;
+    }
+
+    /**
      * Creates a DataTable|Set instance using an array
      * of blobs.
      *
