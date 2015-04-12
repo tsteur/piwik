@@ -240,21 +240,20 @@ class API extends \Piwik\Plugin\API
         // get the data
         // $dataTable instanceOf Set
         $dataTable = $archive->getDataTableFromNumericAndMergeChildren($fieldsToGet);
-   //     $dataTable = $archive->getDataTableFromNumeric($fieldsToGet);
 
-        if ($multipleWebsitesRequested && count($idSites) === 1 && Range::isMultiplePeriod($date, $period)) {
-        } else {
-           // $dataTable = $this->mergeDataTableMapAndPopulateLabel($idSites, $multipleWebsitesRequested, $dataTable);
+        if ($multipleWebsitesRequested) {
+            $this->populateLabel($dataTable);
         }
 
-
-        if ($dataTable instanceof DataTable\Map) {
-            foreach ($dataTable->getDataTables() as $table) {
-                $this->addMissingWebsites($table, $fieldsToGet, $sitesToProblablyAdd);
+        /*
+            if ($dataTable instanceof DataTable\Map) {
+                foreach ($dataTable->getDataTables() as $table) {
+                    $this->addMissingWebsites($table, $fieldsToGet, $sitesToProblablyAdd);
+                }
+            } else {
+                $this->addMissingWebsites($dataTable, $fieldsToGet, $sitesToProblablyAdd);
             }
-        } else {
-            $this->addMissingWebsites($dataTable, $fieldsToGet, $sitesToProblablyAdd);
-        }
+        */
 
         // calculate total visits/actions/revenue
         $totalMetrics = $this->preformatApiMetricsForTotalsCalculation($apiMetrics);
@@ -276,12 +275,8 @@ class API extends \Piwik\Plugin\API
             $pastArchive = Archive::build($idSites, $period, $strLastDate, $segment, $_restrictSitesToLogin);
             $pastData = $pastArchive->getDataTableFromNumericAndMergeChildren($fieldsToGet);
 
-           // $pastData = $pastArchive->getDataTableFromNumeric($fieldsToGet);
-
-            if ($multipleWebsitesRequested && count($idSites) === 1 && Range::isMultiplePeriod($date, $period)) {
-
-            } else {
-            //    $pastData = $this->mergeDataTableMapAndPopulateLabel($idSites, $multipleWebsitesRequested, $pastData);
+            if ($multipleWebsitesRequested) {
+                $this->populateLabel($pastData);
             }
 
             // use past data to calculate evolution percentages
@@ -289,7 +284,6 @@ class API extends \Piwik\Plugin\API
         }
 
         // move the site id to a metadata column
-        $dataTable->filter('ColumnCallbackAddMetadata', array('label', 'idsite'));
         $dataTable->queueFilter('MetadataCallbackAddMetadata', array('idsite', 'group', array('\Piwik\Site', 'getGroupFor'), array()));
         $dataTable->queueFilter('MetadataCallbackAddMetadata', array('idsite', 'main_url', array('\Piwik\Site', 'getMainUrlFor'), array()));
 
@@ -496,43 +490,24 @@ class API extends \Piwik\Plugin\API
             return;
         }
 
-        $siteIdsInDataTable = array();
-        foreach ($dataTable->getRowsWithoutSummaryRow() as $row) {
-            /** @var DataTable\Row $row */
-            $siteIdsInDataTable[] = $row->getColumn('label');
-        }
+        $siteIdsInDataTable = $dataTable->getColumn('label');
 
         $siteIds = array_keys($sitesToProblablyAdd);
         $siteRow = array_combine($fieldsToGet, array_pad(array(), count($fieldsToGet), 0));
 
-        foreach ($siteIds as $siteId) {
-            if (!in_array($siteId, $siteIdsInDataTable)) {
+        foreach (array_diff($siteIds, $siteIdsInDataTable) as $siteId) {
                 $siteRow['label'] = (int)$siteId;
                 $dataTable->addRow(new Row(array(Row::COLUMNS => $siteRow)));
-            }
         }
     }
 
-    private function mergeDataTableMapAndPopulateLabel($idSitesOrIdSite, $multipleWebsitesRequested, $dataTable)
+    private function populateLabel($dataTable)
     {
-        // get rid of the DataTable\Map that is created by the IndexedBySite archive type
-        if ($dataTable instanceof DataTable\Map && $multipleWebsitesRequested) {
-
-            return $dataTable->mergeChildren();
-
-        } else {
-
-            if (!$dataTable instanceof DataTable\Map && $dataTable->getRowsCount() > 0) {
-
-                $firstSite = is_array($idSitesOrIdSite) ? reset($idSitesOrIdSite) : $idSitesOrIdSite;
-
-                $firstDataTableRow = $dataTable->getFirstRow();
-
-                $firstDataTableRow->setColumn('label', $firstSite);
+        $dataTable->filter(function (DataTable $table) {
+            foreach ($table->getRows() as $row) {
+                $row->setColumn('label', $row->getMetadata('idsite'));
             }
-        }
-
-        return $dataTable;
+        });
     }
 
     private function isEcommerceEvolutionMetric($metricSettings)

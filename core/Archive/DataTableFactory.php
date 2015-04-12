@@ -146,6 +146,11 @@ class DataTableFactory
         $this->idSubtable = $idSubtable;
     }
 
+    private function isNumericDataType()
+    {
+        return $this->dataType == 'numeric';
+    }
+
     /**
      * Creates a DataTable|Set instance using an index of
      * archive data.
@@ -163,7 +168,7 @@ class DataTableFactory
             // for numeric data, if there's no index (and thus only 1 site & period in the query),
             // we want to display every queried metric name
             if (empty($index)
-                && $this->dataType == 'numeric'
+                && $this->isNumericDataType()
             ) {
                 $index = $this->defaultRow;
             }
@@ -182,10 +187,28 @@ class DataTableFactory
      */
     public function makeMerged($index, $resultIndices)
     {
-        $metadata = $this->getDefaultMetadata();
-        $numResultInddices = count($resultIndices);
+        $metadata    = $this->getDefaultMetadata();
+        $firstIdSite = reset($this->sitesId);
+        $isNumeric   = $this->isNumericDataType();
+        $numResultIndices = count($resultIndices);
 
-        if ($numResultInddices === 2) {
+        $firstResultIndex = null;
+        if ($numResultIndices >= 1) {
+            reset($resultIndices);
+            $firstResultIndex = key($resultIndices);
+        }
+
+        if ($numResultIndices === 1 && $firstResultIndex === self::TABLE_METADATA_PERIOD_INDEX) {
+            $index = array($firstIdSite => $index);
+            $numResultIndices = 2;
+        } elseif ($numResultIndices === 0) {
+            $index = array($firstIdSite => $index);
+            $numResultIndices = 1;
+        }
+
+        $defaultRow = array_combine($this->dataNames, array_pad(array(), count($this->dataNames), 0));
+
+        if ($numResultIndices === 2) {
             $tables = array();
             foreach ($this->periods as $range => $period) {
                 $metadata[self::TABLE_METADATA_PERIOD_INDEX] = $period;
@@ -195,32 +218,42 @@ class DataTableFactory
             foreach ($index as $idsite => $table) {
                 foreach ($table as $period => $row) {
                     if (!empty($row)) {
-                        $row['label'] = $idsite;
-                        $tables[$period]->addRow(new Row(array(Row::COLUMNS => $row)));
+                        $tables[$period]->addRow(new Row(array(
+                            Row::COLUMNS => $row,
+                            Row::METADATA => array('idsite' => $idsite))));
+                    } elseif ($isNumeric) {
+                        $tables[$period]->addRow(new Row(array(
+                            Row::COLUMNS => $defaultRow,
+                            Row::METADATA => array('idsite' => $idsite))));
                     }
                 }
             }
+
             $dataTable = new DataTable\Map();
             foreach ($this->periods as $range => $period) {
                 $label = $this->prettifyIndexLabel(self::TABLE_METADATA_PERIOD_INDEX, $range);
                 $dataTable->addTable($tables[$range], $label);
             }
-        } elseif ($numResultInddices === 1) {
-            $dataTable = new DataTable();
+
+        } else {
+            if ($isNumeric) {
+                $dataTable = new DataTable\Simple();
+            } else {
+                $dataTable = new DataTable();
+            }
+
             $dataTable->setAllTableMetadata($metadata);
-            foreach ($index as $i => $row) {
+            foreach ($index as $idsite => $row) {
                 if (!empty($row)) {
-                    $row['label'] = $i;
-                    $dataTable->addRow(new Row(array(Row::COLUMNS => $row)));
+                    $dataTable->addRow(new Row(array(Row::COLUMNS => $row, Row::METADATA => array('idsite' => $idsite))));
+                } elseif ($isNumeric) {
+                    $dataTable->addRow(new Row(array(
+                        Row::COLUMNS => $defaultRow,
+                        Row::METADATA => array('idsite' => $idsite))));
                 }
             }
-        } else {
-            $siteId = reset($this->sitesId);
-            $dataTable = $this->make($index, array());
-            foreach ($dataTable->getRows() as $row) {
-                $row->setColumn('label', $siteId);
-            }
         }
+
         return $dataTable;
     }
 
@@ -454,7 +487,7 @@ class DataTableFactory
             // w/o this code, an empty array would be created, and other parts of Piwik
             // would break.
             if (count($this->dataNames) == 1
-                && $this->dataType == 'numeric'
+                && $this->isNumericDataType()
             ) {
                 $name = reset($this->dataNames);
                 $table->addRow(new Row(array(Row::COLUMNS => array($name => 0))));
