@@ -153,6 +153,8 @@
             }).then(function (response) {
                 if (response && response.reportTotal) {
                     model.lastVisits = response.reportTotal.nb_visits;
+                } else {
+                    model.lastVisits = 0;
                 }
             });
         }

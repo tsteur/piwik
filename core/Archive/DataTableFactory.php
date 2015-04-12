@@ -245,11 +245,15 @@ class DataTableFactory
             $dataTable->setAllTableMetadata($metadata);
             foreach ($index as $idsite => $row) {
                 if (!empty($row)) {
-                    $dataTable->addRow(new Row(array(Row::COLUMNS => $row, Row::METADATA => array('idsite' => $idsite))));
+                    $dataTable->addRow(new Row(array(
+                        Row::COLUMNS => $row,
+                        Row::METADATA => array('idsite' => $idsite))
+                    ));
                 } elseif ($isNumeric) {
                     $dataTable->addRow(new Row(array(
                         Row::COLUMNS => $defaultRow,
-                        Row::METADATA => array('idsite' => $idsite))));
+                        Row::METADATA => array('idsite' => $idsite))
+                    ));
                 }
             }
         }

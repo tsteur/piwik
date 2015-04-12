@@ -109,6 +109,7 @@
             <td colspan="8" class="site_search">
                 <input type="text"
                        ng-model="searchTerm"
+                       piwik-onenter="model.searchSite(searchTerm)"
                        placeholder="{{ 'Actions_SubmenuSitesearch' | translate }}">
                 <img title="{{ 'General_ClickToSearch' | translate }}"
                      ng-click="model.searchSite(searchTerm)"

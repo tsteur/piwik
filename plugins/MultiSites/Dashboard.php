@@ -40,8 +40,8 @@ class Dashboard
                 $idSite = $row->getColumn('label');
                 $site = Site::getSite($idSite);
                 $row->setColumn('label', $site['name']);
-                $row->setColumn('main_url', $site['main_url']);
-                $row->setColumn('group', $site['group']);
+                $row->setMetadata('main_url', $site['main_url']);
+                $row->setMetadata('group', $site['group']);
             }
         });
 
@@ -99,12 +99,12 @@ class Dashboard
 
         foreach ($sites->getRows() as $index => $site) {
 
-            $group = $site->getColumn('group');
+            $group = $site->getMetadata('group');
 
             if (!empty($group) && !array_key_exists($group, $groups)) {
                 $row = new DataTableSummaryRow();
                 $row->setColumn('label', $group);
-                $row->setColumn('isGroup', true);
+                $row->setMetadata('isGroup', 1);
                 $row->setSubtable($sites->getEmptyClone(true));
                 $sitesByGroup->addRow($row);
 
@@ -130,6 +130,10 @@ class Dashboard
         $flatSites = array();
         foreach ($sites as $site) {
             if (!empty($site['subtable'])) {
+                if (isset($site['idsubdatatable'])) {
+                    unset($site['idsubdatatable']);
+                }
+
                 $subtable = $site['subtable'];
                 unset($site['subtable']);
                 $flatSites[] = $site;
