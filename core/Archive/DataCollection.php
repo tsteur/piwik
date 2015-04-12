@@ -225,7 +225,7 @@ class DataCollection
         }
 
         $dataTableFactory = new DataTableFactory(
-            $this->dataNames, 'blob', $this->sitesId, $this->periods, $this->defaultRow);
+            $this->dataNames, $this->dataType, $this->sitesId, $this->periods, $this->defaultRow);
 
         $index = $this->getIndexedArray($resultIndices);
 

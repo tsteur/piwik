@@ -183,7 +183,9 @@ class DataTableFactory
     public function makeMerged($index, $resultIndices)
     {
         $metadata = $this->getDefaultMetadata();
-        if (count($resultIndices) == 2) {
+        $numResultInddices = count($resultIndices);
+
+        if ($numResultInddices === 2) {
             $tables = array();
             foreach ($this->periods as $range => $period) {
                 $metadata[self::TABLE_METADATA_PERIOD_INDEX] = $period;
@@ -203,7 +205,7 @@ class DataTableFactory
                 $label = $this->prettifyIndexLabel(self::TABLE_METADATA_PERIOD_INDEX, $range);
                 $dataTable->addTable($tables[$range], $label);
             }
-        } else {
+        } elseif ($numResultInddices === 1) {
             $dataTable = new DataTable();
             $dataTable->setAllTableMetadata($metadata);
             foreach ($index as $i => $row) {
@@ -211,6 +213,12 @@ class DataTableFactory
                     $row['label'] = $i;
                     $dataTable->addRow(new Row(array(Row::COLUMNS => $row)));
                 }
+            }
+        } else {
+            $siteId = reset($this->sitesId);
+            $dataTable = $this->make($index, array());
+            foreach ($dataTable->getRows() as $row) {
+                $row->setColumn('label', $siteId);
             }
         }
         return $dataTable;
