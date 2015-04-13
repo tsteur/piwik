@@ -203,7 +203,6 @@ class DataTableFactory
             $numResultIndices = 2;
         } elseif ($numResultIndices === 0) {
             $index = array($firstIdSite => $index);
-            $numResultIndices = 1;
         }
 
         $defaultRow = array_combine($this->dataNames, array_pad(array(), count($this->dataNames), 0));
@@ -219,11 +218,11 @@ class DataTableFactory
                 foreach ($table as $period => $row) {
                     if (!empty($row)) {
                         $tables[$period]->addRow(new Row(array(
-                            Row::COLUMNS => $row,
+                            Row::COLUMNS  => $row,
                             Row::METADATA => array('idsite' => $idsite))));
                     } elseif ($isNumeric) {
                         $tables[$period]->addRow(new Row(array(
-                            Row::COLUMNS => $defaultRow,
+                            Row::COLUMNS  => $defaultRow,
                             Row::METADATA => array('idsite' => $idsite))));
                     }
                 }
@@ -237,7 +236,7 @@ class DataTableFactory
             }
 
         } else {
-            if ($isNumeric) {
+            if ($isNumeric && 0 === $numResultIndices) {
                 $dataTable = new DataTable\Simple();
             } else {
                 $dataTable = new DataTable();
@@ -247,12 +246,12 @@ class DataTableFactory
             foreach ($index as $idsite => $row) {
                 if (!empty($row)) {
                     $dataTable->addRow(new Row(array(
-                        Row::COLUMNS => $row,
+                        Row::COLUMNS  => $row,
                         Row::METADATA => array('idsite' => $idsite))
                     ));
                 } elseif ($isNumeric) {
                     $dataTable->addRow(new Row(array(
-                        Row::COLUMNS => $defaultRow,
+                        Row::COLUMNS  => $defaultRow,
                         Row::METADATA => array('idsite' => $idsite))
                     ));
                 }

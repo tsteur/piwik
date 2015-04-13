@@ -246,14 +246,13 @@ class API extends \Piwik\Plugin\API
         }
 
         /*
-            if ($dataTable instanceof DataTable\Map) {
-                foreach ($dataTable->getDataTables() as $table) {
-                    $this->addMissingWebsites($table, $fieldsToGet, $sitesToProblablyAdd);
-                }
-            } else {
-                $this->addMissingWebsites($dataTable, $fieldsToGet, $sitesToProblablyAdd);
+        if ($dataTable instanceof DataTable\Map) {
+            foreach ($dataTable->getDataTables() as $table) {
+                $this->addMissingWebsites($table, $fieldsToGet, $idSites);
             }
-        */
+        } else {
+            $this->addMissingWebsites($dataTable, $fieldsToGet, $idSites);
+        }*/
 
         // calculate total visits/actions/revenue
         $totalMetrics = $this->preformatApiMetricsForTotalsCalculation($apiMetrics);
@@ -287,7 +286,6 @@ class API extends \Piwik\Plugin\API
         $dataTable->queueFilter('MetadataCallbackAddMetadata', array('idsite', 'group', array('\Piwik\Site', 'getGroupFor'), array()));
         $dataTable->queueFilter('MetadataCallbackAddMetadata', array('idsite', 'main_url', array('\Piwik\Site', 'getMainUrlFor'), array()));
 
-
         // set the label of each row to the site name
         if ($multipleWebsitesRequested) {
             $dataTable->queueFilter('ColumnCallbackReplace', array('label', '\Piwik\Site::getNameFor'));
@@ -314,13 +312,6 @@ class API extends \Piwik\Plugin\API
                      }
                 )
             );
-        }
-
-        if ($multipleWebsitesRequested && $dataTable->getRowsCount() === 1 && $dataTable instanceof DataTable\Simple) {
-            $simpleTable = $dataTable;
-            $dataTable   = $simpleTable->getEmptyClone();
-            $dataTable->addRow($simpleTable->getFirstRow());
-            unset($simpleTable);
         }
 
         return $dataTable;
@@ -481,23 +472,25 @@ class API extends \Piwik\Plugin\API
     /**
      * @param DataTable|DataTable\Map $dataTable
      * @param $fieldsToGet
-     * @param $sitesToProblablyAdd
+     * @param $siteIds
      */
-    private function addMissingWebsites($dataTable, $fieldsToGet, $sitesToProblablyAdd)
+    private function addMissingWebsites($dataTable, $fieldsToGet, $siteIds)
     {
-        if (count($sitesToProblablyAdd) === $dataTable->getRowsCount()) {
+        if (count($siteIds) === $dataTable->getRowsCount()) {
             // all prearchived
             return;
         }
 
-        $siteIdsInDataTable = $dataTable->getColumn('label');
+        $siteIdsInDataTable = $dataTable->getMetadata('idsite');
 
-        $siteIds = array_keys($sitesToProblablyAdd);
-        $siteRow = array_combine($fieldsToGet, array_pad(array(), count($fieldsToGet), 0));
+        $siteRow    = array_combine($fieldsToGet, array_pad(array(), count($fieldsToGet), 0));
+        $sitesToAdd = array_diff($siteIds, $siteIdsInDataTable);
 
-        foreach (array_diff($siteIds, $siteIdsInDataTable) as $siteId) {
-                $siteRow['label'] = (int)$siteId;
-                $dataTable->addRow(new Row(array(Row::COLUMNS => $siteRow)));
+        foreach ($sitesToAdd as $siteId) {
+            $dataTable->addRow(new Row(array(
+                Row::COLUMNS => $siteRow,
+                Row::METADATA => array('idsite' => $siteId))
+            ));
         }
     }
 
