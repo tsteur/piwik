@@ -630,21 +630,19 @@ class Archive
 
         $archiveData = ArchiveSelector::getArchiveData($archiveIds, $archiveNames, $archiveDataType, $idSubtable);
 
+        $isNumeric = $archiveDataType == 'numeric';
+
         foreach ($archiveData as $row) {
             // values are grouped by idsite (site ID), date1-date2 (date range), then name (field name)
-            $idSite    = $row['idsite'];
-            $periodStr = $row['date1'] . "," . $row['date2'];
+            $periodStr = $row['date1'] . ',' . $row['date2'];
 
-            if ($archiveDataType == 'numeric') {
+            if ($isNumeric) {
                 $row['value'] = $this->formatNumericValue($row['value']);
             } else {
-                $result->addMetadata($idSite, $periodStr, 'ts_archived', $row['ts_archived']);
+                $result->addMetadata($row['idsite'], $periodStr, 'ts_archived', $row['ts_archived']);
             }
 
-            $resultRow = & $result->get($idSite, $periodStr);
-
-            // one blob per datatable or subtable
-            $resultRow[$row['name']] = $row['value'];
+            $result->set($row['idsite'], $periodStr, $row['name'], $row['value']);
         }
 
         return $result;

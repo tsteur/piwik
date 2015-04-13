@@ -138,6 +138,21 @@ class DataCollection
     }
 
     /**
+     * Set data for a specific site & period. If there is no data for the given site ID & period,
+     * it is set to the default row.
+     *
+     * @param int $idSite
+     * @param string $period eg, '2012-01-01,2012-01-31'
+     * @param string $name eg 'nb_visits'
+     * @param string $value eg 5
+     */
+    public function set($idSite, $period, $name, $value)
+    {
+        $row = & $this->get($idSite, $period);
+        $row[$name] = $value;
+    }
+
+    /**
      * Adds a new metadata to the data for specific site & period. If there is no
      * data for the given site ID & period, it is set to the default row.
      *
@@ -345,7 +360,7 @@ class DataCollection
         foreach ($metadataNamesToIndexBy as $metadataName) {
             if ($metadataName == DataTableFactory::TABLE_METADATA_SITE_INDEX) {
                 $key = $idSite;
-            } else if ($metadataName == DataTableFactory::TABLE_METADATA_PERIOD_INDEX) {
+            } elseif ($metadataName == DataTableFactory::TABLE_METADATA_PERIOD_INDEX) {
                 $key = $period;
             } else {
                 $key = $row[self::METADATA_CONTAINER_ROW_KEY][$metadataName];

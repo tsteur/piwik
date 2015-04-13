@@ -189,6 +189,9 @@ class DataTableFactory
      * `$dataTableFactory->make()->mergeChildren()` just much faster. It is mainly useful for reports across many sites
      * eg `MultiSites.getAll`. Was done as part of https://github.com/piwik/piwik/issues/6809
      *
+     * @param array $index @see DataCollection
+     * @param array $resultIndices an array mapping metadata names with pretty metadata labels.
+     *
      * @return DataTable|DataTable\Map
      */
     public function makeMerged($index, $resultIndices)
@@ -213,7 +216,7 @@ class DataTableFactory
             $index = array($firstIdSite => $index);
         }
 
-        $defaultRow = array_combine($this->dataNames, array_pad(array(), count($this->dataNames), 0));
+        $defaultRow = $this->defaultRow;
 
         if ($numResultIndices === 2) {
             $tables = array();
@@ -236,15 +239,19 @@ class DataTableFactory
             }
 
             foreach ($index as $idsite => $table) {
+                $rowMeta = array('idsite' => $idsite);
+
                 foreach ($table as $range => $row) {
                     if (!empty($row)) {
                         $tables[$range]->addRow(new Row(array(
                             Row::COLUMNS  => $row,
-                            Row::METADATA => array('idsite' => $idsite))));
+                            Row::METADATA => $rowMeta)
+                        ));
                     } elseif ($isNumeric) {
                         $tables[$range]->addRow(new Row(array(
                             Row::COLUMNS  => $defaultRow,
-                            Row::METADATA => array('idsite' => $idsite))));
+                            Row::METADATA => $rowMeta)
+                        ));
                     }
                 }
             }
