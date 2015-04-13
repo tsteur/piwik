@@ -21,20 +21,24 @@ use Piwik\View;
 
 class Dashboard
 {
+    /** @var DataTable */
+    private $sitesByGroup;
+
     /**
-     * @param array $request
+     * @var int
+     */
+    private $numSites;
+
+    /**
      * @param string $period
      * @param string $date
      * @param string|false $segment
-     * @param string $pattern
-     * @param int $limit
-     * @return array
      */
-    public function getAllWithGroups($request, $period, $date, $segment, $pattern, $limit)
+    public function __construct($period, $date, $segment)
     {
         $sites = API::getInstance()->getAll($period, $date, $segment, $_restrictSitesToLogin = false,
-                                            $enhanced = true, $searchTerm = false,
-                                            $showColumns = array('nb_visits', 'nb_pageviews', 'revenue'));
+                                                  $enhanced = true, $searchTerm = false,
+                                                  $showColumns = array('nb_visits', 'nb_pageviews', 'revenue'));
         $sites->deleteRow(DataTable::ID_SUMMARY_ROW);
         $sites->filter(function (DataTable $table) {
             foreach ($table->getRows() as $row) {
@@ -46,39 +50,73 @@ class Dashboard
             }
         });
 
-        $numSites   = $sites->getRowsCount();
-        $lastPeriod = $this->getLastPeriod($sites);
-        $totals = array(
-            'nb_pageviews'       => $sites->getMetadata('total_nb_pageviews'),
-            'nb_visits'          => $sites->getMetadata('total_nb_visits'),
-            'revenue'            => $sites->getMetadata('total_revenue'),
-            'nb_visits_lastdate' => $sites->getMetadata('total_nb_visits_lastdate') ? : 0,
-        );
+        $this->numSites = $sites->getRowsCount();
+        $this->sitesByGroup = $this->moveSitesHavingAGroupIntoSubtables($sites);
+    }
 
-        $sitesByGroup = $this->moveSitesHavingAGroupIntoSubtables($sites);
+    public function getSites($request, $limit)
+    {
+        $request['filter_limit'] = $limit;
 
-        if ($pattern !== '') {
-            // apply search, we need to make sure to always include the parent group the site belongs to
-            $this->nestedSearch($sitesByGroup, strtolower($pattern));
-            $numSites = $sitesByGroup->getRowsCountRecursive();
-        }
-
-        $sitesExpanded = $this->convertDataTableToArrayAndApplyFilters($sitesByGroup, $request);
+        $sitesExpanded = $this->convertDataTableToArrayAndApplyFilters($this->sitesByGroup, $request);
         $sitesFlat     = $this->makeSitesFlat($sitesExpanded);
         $sitesFlat     = $this->applyLimitIfNeeded($sitesFlat, $limit);
         $sitesFlat     = $this->enrichValues($sitesFlat);
 
+        return $sitesFlat;
+    }
+
+    public function getTotals()
+    {
         return array(
-            'numSites' => $numSites,
-            'totals'   => $totals,
-            'sites'    => $sitesFlat,
-            'lastDate' => $lastPeriod
+            'nb_pageviews'       => $this->sitesByGroup->getMetadata('total_nb_pageviews'),
+            'nb_visits'          => $this->sitesByGroup->getMetadata('total_nb_visits'),
+            'revenue'            => $this->sitesByGroup->getMetadata('total_revenue'),
+            'nb_visits_lastdate' => $this->sitesByGroup->getMetadata('total_nb_visits_lastdate') ? : 0,
         );
     }
 
-    private function getLastPeriod(DataTable $sites)
+    public function getNumSites()
     {
-        $lastPeriod = $sites->getMetadata('last_period_date');
+        return $this->numSites;
+    }
+
+    public function search($pattern)
+    {
+        $this->nestedSearch($this->sitesByGroup, $pattern);
+
+        $this->numSites = $this->sitesByGroup->getRowsCountRecursive();
+    }
+
+    private function nestedSearch(DataTable $sitesByGroup, $pattern)
+    {
+        foreach ($sitesByGroup->getRows() as $index => $site) {
+
+            $label = strtolower($site->getColumn('label'));
+            $labelMatches = false !== strpos($label, $pattern);
+
+            if ($site->getMetadata('isGroup')) {
+                $subtable = $site->getSubtable();
+                $this->nestedSearch($subtable, $pattern);
+
+                if (!$labelMatches && !$subtable->getRowsCount()) {
+                    // we keep the group if at least one site within the group matches the pattern
+                    $sitesByGroup->deleteRow($index);
+                }
+
+            } elseif (!$labelMatches) {
+                $group = $site->getMetadata('group');
+
+                if (!$group || false === strpos(strtolower($group), $pattern)) {
+                    $sitesByGroup->deleteRow($index);
+                }
+            }
+        }
+    }
+
+    public function getLastDate()
+    {
+        $lastPeriod = $this->sitesByGroup->getMetadata('last_period_date');
 
         if (!empty($lastPeriod)) {
             $lastPeriod = $lastPeriod->toString();
@@ -219,34 +257,5 @@ class Dashboard
         }
 
         return $sites;
-    }
-
-    private function nestedSearch(DataTable $sitesByGroup, $pattern)
-    {
-        foreach ($sitesByGroup->getRows() as $index => $site) {
-
-            $label = strtolower($site->getColumn('label'));
-            $labelMatches = false !== strpos($label, $pattern);
-
-            if ($site->getColumn('isGroup')) {
-                $subtable = $site->getSubtable();
-                // filter subtable
-                $this->nestedSearch($subtable, $pattern);
-
-                if (!$labelMatches && !$subtable->getRowsCount()) {
-                    $sitesByGroup->deleteRow($index);
-                }
-
-            } else {
-
-                if (!$labelMatches) {
-                    $group = $site->getColumn('group');
-
-                    if (!$group || false === strpos(strtolower($group), $pattern)) {
-                        $sitesByGroup->deleteRow($index);
-                    }
-                }
-            }
-        }
     }
 }

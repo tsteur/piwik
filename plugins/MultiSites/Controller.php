@@ -49,18 +49,28 @@ class Controller extends \Piwik\Plugin\Controller
     {
         Piwik::checkUserHasSomeViewAccess();
 
-        $pattern = Common::getRequestVar('pattern', '', 'string');
-        $limit   = Common::getRequestVar('filter_limit', 0, 'int');
         $period  = Common::getRequestVar('period', null, 'string');
         $date    = Common::getRequestVar('date', null, 'string');
         $segment = Common::getRequestVar('segment', false, 'string');
+        $pattern = Common::getRequestVar('pattern', '', 'string');
+        $limit   = Common::getRequestVar('filter_limit', 0, 'int');
         $segment = $segment ?: false;
         $request = $_GET + $_POST;
 
-        $dashboard = new Dashboard();
-        $sites = $dashboard->getAllWithGroups($request, $period, $date, $segment, $pattern, $limit);
+        $dashboard = new Dashboard($period, $date, $segment);
 
-        return json_encode($sites);
+        if ($pattern !== '') {
+            $dashboard->search(strtolower($pattern));
+        }
+
+        $response = array(
+            'numSites' => $dashboard->getNumSites(),
+            'totals'   => $dashboard->getTotals(),
+            'lastDate' => $dashboard->getLastDate(),
+            'sites'    => $dashboard->getSites($request, $limit)
+        );
+
+        return json_encode($response);
     }
 
     public function getSitesInfo($isWidgetized = false)
