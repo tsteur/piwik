@@ -92,6 +92,12 @@ class Dashboard
         $request['totals'] = 0;
         $request['format_metrics'] = 1;
 
+        if (!empty($request['filter_sort_column']) && $request['filter_sort_column'] === 'nb_pageviews') {
+            $request['filter_sort_column'] = 'Actions_nb_pageviews';
+        } elseif (!empty($request['filter_sort_column']) && $request['filter_sort_column'] === 'revenue') {
+            $request['filter_sort_column'] = 'Goal_revenue';
+        }
+
         $responseBuilder = new ResponseBuilder('php', $request);
         $rows = $responseBuilder->getResponse($table, 'MultiSites', 'getAll');
 
@@ -103,9 +109,8 @@ class Dashboard
         /** @var DataTableSummaryRow[] $groups */
         $groups = array();
 
-        $sitesByGroup = $sites->getEmptyClone(true);
-        $sitesByGroup->disableFilter('ColumnCallbackReplace');
-        $sitesByGroup->disableFilter('MetadataCallbackAddMetadata');
+        $sitesByGroup = $this->makeCloneOfDataTableSites($sites);
+        $sitesByGroup->enableRecursiveFilters();
 
         foreach ($sites->getRows() as $index => $site) {
 
@@ -115,7 +120,7 @@ class Dashboard
                 $row = new DataTableSummaryRow();
                 $row->setColumn('label', $group);
                 $row->setMetadata('isGroup', 1);
-                $row->setSubtable($sites->getEmptyClone(true));
+                $row->setSubtable($this->createGroupSubtable($sites));
                 $sitesByGroup->addRow($row);
 
                 $groups[$group] = $row;
@@ -131,6 +136,24 @@ class Dashboard
         foreach ($groups as $group) {
             $group->recalculate();
         }
+        
+        return $sitesByGroup;
+    }
+
+    private function createGroupSubtable(DataTable $sites)
+    {
+        $table = new DataTable();
+        $processedMetrics = $sites->getMetadata(DataTable::EXTRA_PROCESSED_METRICS_METADATA_NAME);
+        $table->setMetadata(DataTable::EXTRA_PROCESSED_METRICS_METADATA_NAME, $processedMetrics);
+
+        return $table;
+    }
+
+    private function makeCloneOfDataTableSites(DataTable $sites)
+    {
+        $sitesByGroup = $sites->getEmptyClone(true);
+        $sitesByGroup->disableFilter('ColumnCallbackReplace');
+        $sitesByGroup->disableFilter('MetadataCallbackAddMetadata');
 
         return $sitesByGroup;
     }
