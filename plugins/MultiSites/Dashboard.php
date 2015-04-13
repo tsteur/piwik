@@ -11,10 +11,13 @@ namespace Piwik\Plugins\MultiSites;
 use Piwik\API\Request;
 use Piwik\API\ResponseBuilder;
 use Piwik\Config;
+use Piwik\Metrics\Formatter;
+use Piwik\MetricsFormatter;
 use Piwik\Period;
 use Piwik\DataTable;
 use Piwik\DataTable\Row;
 use Piwik\DataTable\Row\DataTableSummaryRow;
+use Piwik\Plugins\API\ProcessedReport;
 use Piwik\Site;
 use Piwik\View;
 
@@ -40,7 +43,6 @@ class Dashboard
                 $idSite = $row->getColumn('label');
                 $site = Site::getSite($idSite);
                 $row->setColumn('label', $site['name']);
-                $row->setMetadata('main_url', $site['main_url']);
                 $row->setMetadata('group', $site['group']);
             }
         });
@@ -63,6 +65,7 @@ class Dashboard
 
         $sitesExpanded = $this->convertDataTableToArray($sitesByGroup, $request);
         $sitesFlat     = $this->makeSitesFlat($sitesExpanded);
+        $sitesFlat     = $this->makeValuesPretty($sitesFlat);
 
         // why do we need to apply a limit again? because we made sitesFlat and it may contain many more sites now
         if ($limit > 0) {
@@ -179,6 +182,23 @@ class Dashboard
         }
 
         return $flatSites;
+    }
+
+    private function makeValuesPretty($sites)
+    {
+        $column = 'revenue';
+        $formatter = new Formatter();
+
+        foreach ($sites as &$site) {
+            if (!isset($site['idsite'])) {
+                continue;
+            }
+
+            $site['revenue']  = $formatter->getPrettyMoney($site[$column], $site['idsite']);
+            $site['main_url'] = Site::getMainUrlFor($site['idsite']);
+        }
+
+        return $sites;
     }
 
     private function nestedSearch(DataTable $sitesByGroup, $pattern)
