@@ -245,15 +245,6 @@ class API extends \Piwik\Plugin\API
             $this->populateLabel($dataTable);
         }
 
-        /*
-        if ($dataTable instanceof DataTable\Map) {
-            foreach ($dataTable->getDataTables() as $table) {
-                $this->addMissingWebsites($table, $fieldsToGet, $idSites);
-            }
-        } else {
-            $this->addMissingWebsites($dataTable, $fieldsToGet, $idSites);
-        }*/
-
         // calculate total visits/actions/revenue
         $totalMetrics = $this->preformatApiMetricsForTotalsCalculation($apiMetrics);
         $this->setMetricsTotalsMetadata($dataTable, $totalMetrics);
@@ -280,6 +271,7 @@ class API extends \Piwik\Plugin\API
 
             // use past data to calculate evolution percentages
             $this->calculateEvolutionPercentages($dataTable, $pastData, $apiMetrics);
+            $this->setPastTotalVisitsMetadata($dataTable, $pastData);
         }
 
         // move the site id to a metadata column
@@ -459,6 +451,26 @@ class API extends \Piwik\Plugin\API
         }
     }
 
+    /**
+     * Sets the number of total visits in tha pastTable on the dataTable as metadata.
+     *
+     * @param DataTable $dataTable
+     * @param DataTable $pastTable
+     */
+    private function setPastTotalVisitsMetadata($dataTable, $pastTable)
+    {
+        if ($pastTable instanceof DataTable) {
+            $total  = 0;
+            $metric = 'nb_visits';
+
+            foreach ($pastTable->getRows() as $row) {
+                $total += $row->getColumn($metric);
+            }
+
+            $dataTable->setMetadata(self::getTotalMetadataName($metric . '_lastdate'), $total);
+        }
+    }
+
     private static function getTotalMetadataName($name)
     {
         return 'total_' . $name;
@@ -467,31 +479,6 @@ class API extends \Piwik\Plugin\API
     private static function getLastPeriodMetadataName($name)
     {
         return 'last_period_' . $name;
-    }
-
-    /**
-     * @param DataTable|DataTable\Map $dataTable
-     * @param $fieldsToGet
-     * @param $siteIds
-     */
-    private function addMissingWebsites($dataTable, $fieldsToGet, $siteIds)
-    {
-        if (count($siteIds) === $dataTable->getRowsCount()) {
-            // all prearchived
-            return;
-        }
-
-        $siteIdsInDataTable = $dataTable->getMetadata('idsite');
-
-        $siteRow    = array_combine($fieldsToGet, array_pad(array(), count($fieldsToGet), 0));
-        $sitesToAdd = array_diff($siteIds, $siteIdsInDataTable);
-
-        foreach ($sitesToAdd as $siteId) {
-            $dataTable->addRow(new Row(array(
-                Row::COLUMNS => $siteRow,
-                Row::METADATA => array('idsite' => $siteId))
-            ));
-        }
     }
 
     private function populateLabel($dataTable)

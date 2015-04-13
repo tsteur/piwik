@@ -38,8 +38,6 @@
             refreshInterval: 0
         };
 
-        fetchPreviousSummary();
-
         return model;
 
         function cancelRefereshInterval()
@@ -71,8 +69,10 @@
             model.totalActions  = report.totals.nb_pageviews;
             model.totalVisits   = report.totals.nb_visits;
             model.totalRevenue  = report.totals.revenue;
-            model.numberOfSites = report.numSites;
+            model.lastVisits    = report.totals.nb_visits_lastdate;
             model.sites = allSites;
+            model.numberOfSites  = report.numSites;
+            model.lastVisitsDate = report.lastDate;
         }
 
         function getNumberOfFilteredSites () {
@@ -124,39 +124,6 @@
             model.searchTerm  = term;
             model.currentPage = 0;
             fetchAllSites();
-        }
-
-        function fetchPreviousSummary () {
-            piwikApi.fetch({
-                method: 'API.getLastDate'
-            }).then(function (response) {
-                if (response && response.value) {
-                    return response.value;
-                }
-            }).then(function (lastDate) {
-                if (!lastDate) {
-                    return;
-                }
-
-                model.lastVisitsDate = lastDate;
-
-                return piwikApi.fetch({
-                    method: 'API.getProcessedReport',
-                    apiModule: 'MultiSites',
-                    apiAction: 'getAll',
-                    hideMetricsDoc: '1',
-                    filter_limit: '0',
-                    showColumns: 'label,nb_visits',
-                    enhanced: 1,
-                    date: lastDate
-                });
-            }).then(function (response) {
-                if (response && response.reportTotal) {
-                    model.lastVisits = response.reportTotal.nb_visits;
-                } else {
-                    model.lastVisits = 0;
-                }
-            });
         }
 
         function fetchAllSites() {

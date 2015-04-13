@@ -50,6 +50,7 @@ class Dashboard
             'nb_pageviews' => $sites->getMetadata('total_nb_pageviews'),
             'nb_visits' => $sites->getMetadata('total_nb_visits'),
             'revenue' => $sites->getMetadata('total_revenue'),
+            'nb_visits_lastdate' => $sites->getMetadata('total_nb_visits_lastdate') ? : 0,
         );
 
         $sitesByGroup = $this->moveSitesHavingAGroupIntoSubtables($sites);
@@ -68,10 +69,19 @@ class Dashboard
             $sitesFlat = array_slice($sitesFlat, 0, $limit);
         }
 
+        $lastPeriod = $sites->getMetadata('last_period_date');
+
+        if (!empty($lastPeriod)) {
+            $lastPeriod = $lastPeriod->toString();
+        } else {
+            $lastPeriod = '';
+        }
+
         return array(
             'numSites' => $numSites,
             'totals'   => $totals,
             'sites'    => $sitesFlat,
+            'lastDate' => $lastPeriod
         );
     }
 
