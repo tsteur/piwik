@@ -135,6 +135,10 @@ class Dashboard
         }
 
         foreach ($groups as $group) {
+            // we need to recalculate as long as all rows are there, as soon as some rows are removed
+            // we can no longer recalculate the correct value. We might even calculate values for groups
+            // that are not returned. If this becomes a problem we need to keep a copy of this to recalculate
+            // only actual returned groups.
             $group->recalculate();
         }
         

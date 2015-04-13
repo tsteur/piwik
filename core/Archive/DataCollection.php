@@ -214,16 +214,14 @@ class DataCollection
     }
 
     /**
-     * @todo describe!
+     * See {@link DataTableFactory::makeMerged()}
+     *
+     * @param array $resultIndices
      * @return DataTable|DataTable\Map
+     * @throws Exception
      */
     public function getMergedDataTable($resultIndices)
     {
-        if ($this->dataType != 'numeric') {
-            throw new Exception("DataCollection: cannot call getExpandedDataTable with "
-                . "{$this->dataType} data types. Only works with blob data.");
-        }
-
         $dataTableFactory = new DataTableFactory(
             $this->dataNames, $this->dataType, $this->sitesId, $this->periods, $this->defaultRow);
 

@@ -182,7 +182,13 @@ class DataTableFactory
     }
 
     /**
-     * @todo DESCRIBE
+     * Creates a merged DataTable|Map instance using an index of archive data similar to {@link make()}.
+     *
+     * Whereas {@link make()} creates a Map for each result index (period and|or site), this will only create a Map
+     * for a period result index and move all site related indices into one dataTable. This is the same as doing
+     * `$dataTableFactory->make()->mergeChildren()` just much faster. It is mainly useful for reports across many sites
+     * eg `MultiSites.getAll`. Was done as part of https://github.com/piwik/piwik/issues/6809
+     *
      * @return DataTable|DataTable\Map
      */
     public function makeMerged($index, $resultIndices)
@@ -211,34 +217,36 @@ class DataTableFactory
 
         if ($numResultIndices === 2) {
             $tables = array();
+
+            $dataTable = new DataTable\Map();
+            $dataTable->setKeyName($resultIndices[self::TABLE_METADATA_PERIOD_INDEX]);
+
             foreach ($this->periods as $range => $period) {
                 $metadata[self::TABLE_METADATA_PERIOD_INDEX] = $period;
                 if ($useSimpleDataTable) {
-                    $tables[$range] = new DataTable\Simple();
+                    $table = new DataTable\Simple();
                 } else {
-                    $tables[$range] = new DataTable();
+                    $table = new DataTable();
                 }
-                $tables[$range]->setAllTableMetadata($metadata);
+
+                $table->setAllTableMetadata($metadata);
+                $dataTable->addTable($table, $this->prettifyIndexLabel(self::TABLE_METADATA_PERIOD_INDEX, $range));
+
+                $tables[$range] = $table;
             }
+
             foreach ($index as $idsite => $table) {
-                foreach ($table as $period => $row) {
+                foreach ($table as $range => $row) {
                     if (!empty($row)) {
-                        $tables[$period]->addRow(new Row(array(
+                        $tables[$range]->addRow(new Row(array(
                             Row::COLUMNS  => $row,
                             Row::METADATA => array('idsite' => $idsite))));
                     } elseif ($isNumeric) {
-                        $tables[$period]->addRow(new Row(array(
+                        $tables[$range]->addRow(new Row(array(
                             Row::COLUMNS  => $defaultRow,
                             Row::METADATA => array('idsite' => $idsite))));
                     }
                 }
-            }
-
-            $dataTable = new DataTable\Map();
-            $dataTable->setKeyName(end($resultIndices));
-            foreach ($this->periods as $range => $period) {
-                $label = $this->prettifyIndexLabel(self::TABLE_METADATA_PERIOD_INDEX, $range);
-                $dataTable->addTable($tables[$range], $label);
             }
 
         } else {
@@ -247,8 +255,8 @@ class DataTableFactory
             } else {
                 $dataTable = new DataTable();
             }
-
             $dataTable->setAllTableMetadata($metadata);
+
             foreach ($index as $idsite => $row) {
                 if (!empty($row)) {
                     $dataTable->addRow(new Row(array(

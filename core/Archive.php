@@ -357,7 +357,10 @@ class Archive
     }
 
     /**
-     * @todo describe!
+     * Similar to {@link getDataTableFromNumeric()} but merges all children on the created DataTable.
+     *
+     * This is the same as doing `$this->getDataTableFromNumeric()->mergeChildren()` but this way it is much faster.
+     *
      * @return DataTable|DataTable\Map
      */
     public function getDataTableFromNumericAndMergeChildren($names)
