@@ -230,6 +230,7 @@ class DataTableFactory
             }
 
             $dataTable = new DataTable\Map();
+            $dataTable->setKeyName(end($resultIndices));
             foreach ($this->periods as $range => $period) {
                 $label = $this->prettifyIndexLabel(self::TABLE_METADATA_PERIOD_INDEX, $range);
                 $dataTable->addTable($tables[$range], $label);

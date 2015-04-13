@@ -38,11 +38,11 @@ class EcommerceOnlyEvolutionMetric extends EvolutionMetric
         // we don't add the new column
         if ($currentValue === false || !$this->isRevenueEvolution) {
             $idSite = $row->getMetadata('idsite');
-            if ($idSite && !Site::isEcommerceEnabledFor($idSite)) {
+            if (!$idSite || !Site::isEcommerceEnabledFor($idSite)) {
                 $row->deleteColumn($columnName);
-            }
 
-            return false;
+                return false;
+            }
         }
 
         return parent::compute($row);
