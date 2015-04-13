@@ -241,9 +241,7 @@ class API extends \Piwik\Plugin\API
         // $dataTable instanceOf Set
         $dataTable = $archive->getDataTableFromNumericAndMergeChildren($fieldsToGet);
 
-        if ($multipleWebsitesRequested) {
-            $this->populateLabel($dataTable);
-        }
+        $this->populateLabel($dataTable);
 
         // calculate total visits/actions/revenue
         $totalMetrics = $this->preformatApiMetricsForTotalsCalculation($apiMetrics);
@@ -265,9 +263,7 @@ class API extends \Piwik\Plugin\API
             $pastArchive = Archive::build($idSites, $period, $strLastDate, $segment, $_restrictSitesToLogin);
             $pastData = $pastArchive->getDataTableFromNumericAndMergeChildren($fieldsToGet);
 
-            if ($multipleWebsitesRequested) {
-                $this->populateLabel($pastData);
-            }
+            $this->populateLabel($pastData);
 
             // use past data to calculate evolution percentages
             $this->calculateEvolutionPercentages($dataTable, $pastData, $apiMetrics);
