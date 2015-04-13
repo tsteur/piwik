@@ -198,6 +198,8 @@ class DataTableFactory
             $firstResultIndex = key($resultIndices);
         }
 
+        $useSimpleDataTable = !array_key_exists(self::TABLE_METADATA_SITE_INDEX, $resultIndices) && $isNumeric;
+
         if ($numResultIndices === 1 && $firstResultIndex === self::TABLE_METADATA_PERIOD_INDEX) {
             $index = array($firstIdSite => $index);
             $numResultIndices = 2;
@@ -211,7 +213,11 @@ class DataTableFactory
             $tables = array();
             foreach ($this->periods as $range => $period) {
                 $metadata[self::TABLE_METADATA_PERIOD_INDEX] = $period;
-                $tables[$range] = new DataTable();
+                if ($useSimpleDataTable) {
+                    $tables[$range] = new DataTable\Simple();
+                } else {
+                    $tables[$range] = new DataTable();
+                }
                 $tables[$range]->setAllTableMetadata($metadata);
             }
             foreach ($index as $idsite => $table) {
@@ -236,7 +242,7 @@ class DataTableFactory
             }
 
         } else {
-            if ($isNumeric && 0 === $numResultIndices) {
+            if ($useSimpleDataTable) {
                 $dataTable = new DataTable\Simple();
             } else {
                 $dataTable = new DataTable();

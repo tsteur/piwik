@@ -8,11 +8,9 @@
  */
 namespace Piwik\Plugins\MultiSites;
 
-use Piwik\API\Request;
 use Piwik\API\ResponseBuilder;
 use Piwik\Config;
 use Piwik\Metrics\Formatter;
-use Piwik\MetricsFormatter;
 use Piwik\Period;
 use Piwik\DataTable;
 use Piwik\DataTable\Row;
