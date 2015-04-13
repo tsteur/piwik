@@ -23,33 +23,35 @@ class Dashboard
 {
     /**
      * @param array $request
+     * @param string $period
+     * @param string $date
+     * @param string|false $segment
      * @param string $pattern
      * @param int $limit
      * @return array
      */
     public function getAllWithGroups($request, $period, $date, $segment, $pattern, $limit)
     {
-        $segment = $segment ?: false;
-        $showColumns = array(
-            'nb_visits', 'nb_pageviews', 'revenue'
-        );
         $sites = API::getInstance()->getAll($period, $date, $segment, $_restrictSitesToLogin = false,
-                                            $enhanced = true, false, $showColumns);
+                                            $enhanced = true, $searchTerm = false,
+                                            $showColumns = array('nb_visits', 'nb_pageviews', 'revenue'));
         $sites->deleteRow(DataTable::ID_SUMMARY_ROW);
         $sites->filter(function (DataTable $table) {
             foreach ($table->getRows() as $row) {
                 $idSite = $row->getColumn('label');
-                $site = Site::getSite($idSite);
+                $site   = Site::getSite($idSite);
+                // we cannot queue label and group as we might need them for search!
                 $row->setColumn('label', $site['name']);
                 $row->setMetadata('group', $site['group']);
             }
         });
 
-        $numSites = $sites->getRowsCount();
+        $numSites   = $sites->getRowsCount();
+        $lastPeriod = $this->getLastPeriod($sites);
         $totals = array(
-            'nb_pageviews' => $sites->getMetadata('total_nb_pageviews'),
-            'nb_visits' => $sites->getMetadata('total_nb_visits'),
-            'revenue' => $sites->getMetadata('total_revenue'),
+            'nb_pageviews'       => $sites->getMetadata('total_nb_pageviews'),
+            'nb_visits'          => $sites->getMetadata('total_nb_visits'),
+            'revenue'            => $sites->getMetadata('total_revenue'),
             'nb_visits_lastdate' => $sites->getMetadata('total_nb_visits_lastdate') ? : 0,
         );
 
@@ -61,22 +63,10 @@ class Dashboard
             $numSites = $sitesByGroup->getRowsCountRecursive();
         }
 
-        $sitesExpanded = $this->convertDataTableToArray($sitesByGroup, $request);
+        $sitesExpanded = $this->convertDataTableToArrayAndApplyFilters($sitesByGroup, $request);
         $sitesFlat     = $this->makeSitesFlat($sitesExpanded);
-        $sitesFlat     = $this->makeValuesPretty($sitesFlat);
-
-        // why do we need to apply a limit again? because we made sitesFlat and it may contain many more sites now
-        if ($limit > 0) {
-            $sitesFlat = array_slice($sitesFlat, 0, $limit);
-        }
-
-        $lastPeriod = $sites->getMetadata('last_period_date');
-
-        if (!empty($lastPeriod)) {
-            $lastPeriod = $lastPeriod->toString();
-        } else {
-            $lastPeriod = '';
-        }
+        $sitesFlat     = $this->applyLimitIfNeeded($sitesFlat, $limit);
+        $sitesFlat     = $this->enrichValues($sitesFlat);
 
         return array(
             'numSites' => $numSites,
@@ -86,7 +76,20 @@ class Dashboard
         );
     }
 
-    private function convertDataTableToArray(DataTable $table, $request)
+    private function getLastPeriod(DataTable $sites)
+    {
+        $lastPeriod = $sites->getMetadata('last_period_date');
+
+        if (!empty($lastPeriod)) {
+            $lastPeriod = $lastPeriod->toString();
+        } else {
+            $lastPeriod = '';
+        }
+
+        return $lastPeriod;
+    }
+
+    private function convertDataTableToArrayAndApplyFilters(DataTable $table, $request)
     {
         $request['serialize'] = 0;
         $request['expanded'] = 1;
@@ -111,7 +114,7 @@ class Dashboard
         $groups = array();
 
         $sitesByGroup = $this->makeCloneOfDataTableSites($sites);
-        $sitesByGroup->enableRecursiveFilters();
+        $sitesByGroup->enableRecursiveFilters(); // we need to make sure filters get applied to subtables (groups)
 
         foreach ($sites->getRows() as $index => $site) {
 
@@ -157,12 +160,18 @@ class Dashboard
     private function makeCloneOfDataTableSites(DataTable $sites)
     {
         $sitesByGroup = $sites->getEmptyClone(true);
+        // we handle them ourselves for faster performance etc. This way we also avoid to apply them twice.
         $sitesByGroup->disableFilter('ColumnCallbackReplace');
         $sitesByGroup->disableFilter('MetadataCallbackAddMetadata');
 
         return $sitesByGroup;
     }
 
+    /**
+     *
+     * @param $sites
+     * @return array
+     */
     private function makeSitesFlat($sites)
     {
         $flatSites = array();
@@ -186,9 +195,18 @@ class Dashboard
         return $flatSites;
     }
 
-    private function makeValuesPretty($sites)
+    private function applyLimitIfNeeded($sites, $limit)
     {
-        $column = 'revenue';
+        // why do we need to apply a limit again? because we made sitesFlat and it may contain many more sites now
+        if ($limit > 0) {
+            $sites = array_slice($sites, 0, $limit);
+        }
+
+        return $sites;
+    }
+
+    private function enrichValues($sites)
+    {
         $formatter = new Formatter();
 
         foreach ($sites as &$site) {
@@ -196,7 +214,7 @@ class Dashboard
                 continue;
             }
 
-            $site['revenue']  = $formatter->getPrettyMoney($site[$column], $site['idsite']);
+            $site['revenue']  = $formatter->getPrettyMoney($site['revenue'], $site['idsite']);
             $site['main_url'] = Site::getMainUrlFor($site['idsite']);
         }
 

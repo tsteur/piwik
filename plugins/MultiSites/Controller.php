@@ -47,11 +47,14 @@ class Controller extends \Piwik\Plugin\Controller
 
     public function getAllWithGroups()
     {
+        Piwik::checkUserHasSomeViewAccess();
+
         $pattern = Common::getRequestVar('pattern', '', 'string');
         $limit   = Common::getRequestVar('filter_limit', 0, 'int');
         $period  = Common::getRequestVar('period', null, 'string');
         $date    = Common::getRequestVar('date', null, 'string');
         $segment = Common::getRequestVar('segment', false, 'string');
+        $segment = $segment ?: false;
         $request = $_GET + $_POST;
 
         $dashboard = new Dashboard();

@@ -491,13 +491,13 @@ class API extends \Piwik\Plugin\API
     private function populateLabel($dataTable)
     {
         $dataTable->filter(function (DataTable $table) {
-            foreach ($table->getRows() as $row) {
+            foreach ($table->getRowsWithoutSummaryRow() as $row) {
                 $row->setColumn('label', $row->getMetadata('idsite'));
             }
         });
         // make sure label column is always first column
         $dataTable->queueFilter(function (DataTable $table) {
-            foreach ($table->getRows() as $row) {
+            foreach ($table->getRowsWithoutSummaryRow() as $row) {
                 $row->setColumns(array_merge(array('label' => $row->getColumn('label')), $row->getColumns()));
             }
         });
