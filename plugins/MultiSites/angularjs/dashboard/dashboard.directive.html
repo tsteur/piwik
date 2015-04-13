@@ -35,7 +35,7 @@
                 <span class="evolution"
                       ng-click="model.sortBy(evolutionSelector)"> {{ 'MultiSites_Evolution'|translate }}</span>
                 <select class="selector" id="evolution_selector" ng-model="evolutionSelector"
-                        ng-change="model.sortColumn = evolutionSelector">
+                        ng-change="model.sortBy(evolutionSelector)">
                     <option value="visits_evolution">{{ 'General_ColumnNbVisits'|translate }}</option>
                     <option value="pageviews_evolution">{{ 'General_ColumnPageviews'|translate }}</option>
                     <option ng-if="displayRevenueColumn" value="revenue_evolution">{{ 'General_ColumnRevenue'|translate }}</option>
