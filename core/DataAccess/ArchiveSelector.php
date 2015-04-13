@@ -207,12 +207,10 @@ class ArchiveSelector
 
             // get the archive IDs
             foreach ($archiveIds as $row) {
-                $archiveName = $row['name'];
-
                 //FIXMEA duplicate with Archive.php
-                $dateStr = $row['date1'] . "," . $row['date2'];
+                $dateStr = $row['date1'] . ',' . $row['date2'];
 
-                $result[$archiveName][$dateStr][] = $row['idarchive'];
+                $result[$row['name']][$dateStr][] = $row['idarchive'];
             }
         }
 
