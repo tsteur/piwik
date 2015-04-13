@@ -495,6 +495,12 @@ class API extends \Piwik\Plugin\API
                 $row->setColumn('label', $row->getMetadata('idsite'));
             }
         });
+        // make sure label column is always first column
+        $dataTable->queueFilter(function (DataTable $table) {
+            foreach ($table->getRows() as $row) {
+                $row->setColumns(array_merge(array('label' => $row->getColumn('label')), $row->getColumns()));
+            }
+        });
     }
 
     private function isEcommerceEvolutionMetric($metricSettings)
