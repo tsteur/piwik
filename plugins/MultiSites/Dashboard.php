@@ -37,8 +37,8 @@ class Dashboard
     public function __construct($period, $date, $segment)
     {
         $sites = API::getInstance()->getAll($period, $date, $segment, $_restrictSitesToLogin = false,
-                                                  $enhanced = true, $searchTerm = false,
-                                                  $showColumns = array('nb_visits', 'nb_pageviews', 'revenue'));
+                                            $enhanced = true, $searchTerm = false,
+                                            $showColumns = array('nb_visits', 'nb_pageviews', 'revenue'));
         $sites->deleteRow(DataTable::ID_SUMMARY_ROW);
         $sites->filter(function (DataTable $table) {
             foreach ($table->getRows() as $row) {
@@ -134,6 +134,7 @@ class Dashboard
         $request['totals'] = 0;
         $request['format_metrics'] = 1;
 
+        // filter_sort_column does not work correctly is a bug in MultiSites.getAll
         if (!empty($request['filter_sort_column']) && $request['filter_sort_column'] === 'nb_pageviews') {
             $request['filter_sort_column'] = 'Actions_nb_pageviews';
         } elseif (!empty($request['filter_sort_column']) && $request['filter_sort_column'] === 'revenue') {
@@ -154,7 +155,7 @@ class Dashboard
         $sitesByGroup = $this->makeCloneOfDataTableSites($sites);
         $sitesByGroup->enableRecursiveFilters(); // we need to make sure filters get applied to subtables (groups)
 
-        foreach ($sites->getRows() as $index => $site) {
+        foreach ($sites->getRows() as $site) {
 
             $group = $site->getMetadata('group');
 
@@ -206,6 +207,29 @@ class Dashboard
     }
 
     /**
+     * Makes sure to not have any subtables anymore.
+     * So if $sites is
+     * array(
+     *    site1
+     *    site2
+     *        subtable => site3
+     *                    site4
+     *                    site5
+     *    site6
+     *    site7
+     * )
+     *
+     * it will return
+     *
+     * array(
+     *    site1
+     *    site2
+     *    site3
+     *    site4
+     *    site5
+     *    site6
+     *    site7
+     * )
      *
      * @param $sites
      * @return array
@@ -213,6 +237,7 @@ class Dashboard
     private function makeSitesFlat($sites)
     {
         $flatSites = array();
+
         foreach ($sites as $site) {
             if (!empty($site['subtable'])) {
                 if (isset($site['idsubdatatable'])) {
