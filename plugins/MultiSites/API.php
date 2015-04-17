@@ -264,7 +264,7 @@ class API extends \Piwik\Plugin\API
             $this->setPastTotalVisitsMetadata($dataTable, $pastData);
         }
 
-        // move the site id to a metadata column
+        // move the site id to a metadata column 
         $dataTable->queueFilter('MetadataCallbackAddMetadata', array('idsite', 'group', array('\Piwik\Site', 'getGroupFor'), array()));
         $dataTable->queueFilter('MetadataCallbackAddMetadata', array('idsite', 'main_url', array('\Piwik\Site', 'getMainUrlFor'), array()));
 
