@@ -288,11 +288,6 @@ class CronArchive
             }
         }
 
-        if ($this->shouldStartProfiler) {
-            \Piwik\Profiler::setupProfilerXHProf($mainRun = true);
-            $this->log("XHProf profiling is enabled.");
-        }
-
         /**
          * This event is triggered after a CronArchive instance is initialized.
          *
